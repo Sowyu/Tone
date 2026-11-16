@@ -59,7 +59,6 @@ final class NowPlayingService {
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let updates = decoder.feed(handle.availableData)
             guard !updates.isEmpty else { return }
-            // .common includes event tracking, so updates land while the menu is open.
             MainLoop.perform { updates.forEach { self?.apply($0) } }
         }
         process.terminationHandler = { [weak self] _ in

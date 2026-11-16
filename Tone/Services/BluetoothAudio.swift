@@ -77,8 +77,8 @@ final class BluetoothAudio {
         return details[Self.normalize(device.uid)]
     }
 
-    /// Reads paired devices. Called while the Output section is visible, so the
-    /// Bluetooth permission prompt only appears once someone looks at it.
+    /// Reads paired devices. Called when the menu opens, so the Bluetooth
+    /// permission prompt only appears once someone looks at the Output list.
     ///
     /// macOS 27 lists dual-mode devices (AirPods, most headphones) twice, once per
     /// Bluetooth stack, and the copy that isn't carrying audio reports
@@ -112,7 +112,7 @@ final class BluetoothAudio {
         for bt in copies where PrivateBT.uint8(bt, "listeningMode") != nil {
             let before = PrivateBT.uint8(bt, "listeningMode") ?? 0
             PrivateBT.set(bt, "setListeningMode:", mode.rawValue)
-            AudioEngine.log.notice("setListeningMode \(mode.rawValue): before=\(before) after=\(PrivateBT.uint8(bt, "listeningMode") ?? 0) connected=\(bt.isConnected())")
+            AudioEngine.log.debug("setListeningMode \(mode.rawValue): before=\(before) after=\(PrivateBT.uint8(bt, "listeningMode") ?? 0) connected=\(bt.isConnected())")
         }
         details[id]?.listeningMode = mode
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { MainActor.assumeIsolated { self.refresh(coreAudioIDs: [id]) } }
@@ -149,7 +149,7 @@ final class BluetoothAudio {
                 }
             }
         }
-        AudioEngine.log.notice("""
+        AudioEngine.log.debug("""
             BT copy connected=\(device.isConnected()) mode=\(current?.rawValue ?? 0) configs=\(configs) \
             anc=\(anc) transparency=\(transparency) L=\(battery.left ?? -1) R=\(battery.right ?? -1) main=\(battery.main ?? -1)
             """)

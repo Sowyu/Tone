@@ -33,8 +33,6 @@ final class AudioEngine {
         }
     }
 
-    var tappedKeys: Set<String> { Set(taps.keys) }
-
     /// Moves every tap to a new output device. New taps start before old ones
     /// stop so the original audio never leaks through unmuted.
     func setOutputDevice(uid: String?) {

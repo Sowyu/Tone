@@ -44,7 +44,7 @@ final class CapturePermission {
 
     /// TCC calls back on its own queue; hop to main from a nonisolated block.
     nonisolated private static func callback(_ body: @escaping @MainActor (Bool) -> Void) -> @convention(block) (Bool) -> Void {
-        let box = UncheckedBox(body)
+        let box = SendableBox(body)
         return { granted in
             DispatchQueue.main.async { MainActor.assumeIsolated { box.value(granted) } }
         }
@@ -56,9 +56,4 @@ final class CapturePermission {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AudioCapture")!
         NSWorkspace.shared.open(url)
     }
-}
-
-private struct UncheckedBox<T>: @unchecked Sendable {
-    let value: T
-    init(_ value: T) { self.value = value }
 }

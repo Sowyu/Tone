@@ -236,8 +236,8 @@ final class DSPKernel: @unchecked Sendable {
         } else {
             leftData = data
         }
-        (left).update(from: leftData + offset, count: n)
-        (right).update(from: rightData + offset, count: n)
+        left.update(from: leftData + offset, count: n)
+        right.update(from: rightData + offset, count: n)
         return n
     }
 
