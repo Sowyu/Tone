@@ -1,6 +1,6 @@
 # Tone
 
-Tone is a per-app volume mixer and equalizer that lives in the macOS menu bar. Click the icon and a small dark popover shows the master volume, output and input devices, what's playing, and every app making sound. Each app gets its own volume from 0 to 200% and its own 10-band EQ.
+Tone is a per-app volume mixer and equalizer that lives in the macOS menu bar. Click the icon and a menu shows the output volume, output and input devices, what's playing, and every app making sound. Each app gets its own volume from 0 to 200% and its own 10-band EQ.
 
 Tone is a native Swift 6 and SwiftUI app. It installs no audio driver, HAL plug-in or kext. Per-app audio goes through Core Audio process taps, which macOS has offered since 14.2.
 
@@ -10,7 +10,9 @@ The design is Jace's sound mixer concept (JaceThings on X): https://x.com/JaceTh
 
 ## Design
 
-Tone is a real `NSMenu` on its status item, so the glass, hover highlight, keyboard navigation, section headers, separators and submenus are the system's own. Rows that need a slider, a device icon or album art are SwiftUI views in custom menu items. AppKit still tracks their hover and keyboard highlight, and they draw the same accent highlight native items use (5.5 pt inset, 6 pt corners, measured on macOS 27). Each app has a native submenu with its volume slider, Equalizer, Preset and Always Show. The EQ opens in its own panel. Its curve is the actual magnitude response of the biquads the DSP runs.
+Tone is a real `NSMenu` on its status item, so the glass, hover highlight, keyboard navigation, section headers, separators and submenus are the system's own. Devices and apps are native menu items. macOS 27 doesn't draw a menu item's image, so their icons are image attachments in the item's attributed title. Only the rows that hold a control are SwiftUI views in custom menu items: the volume sliders and the Now Playing row with its play and next buttons.
+
+Each app has a submenu with its volume slider, Equalizer, Preset, Move Up and Move Down, Keep in Menu and Hide from Menu. The equalizer opens in its own utility window. Its curve is the actual magnitude response of the biquads the DSP runs.
 
 ## Requirements
 
@@ -53,11 +55,11 @@ The certificate is self-signed, so `security find-identity` lists it as `CSSMERR
 
 1. The first time you change an app's volume or EQ, macOS asks whether Tone may record system audio. The prompt text comes from `NSAudioCaptureUsageDescription`.
 2. Click Allow. Tone taps only the apps you've changed, and the audio never leaves your Mac.
-3. If you clicked Don't Allow, the Applications section shows a banner with a button that opens System Settings > Privacy & Security > Screen & System Audio Recording. Turn Tone on there.
+3. If you clicked Don't Allow, the Applications section shows Allow System Audio Recording…, which opens System Settings > Privacy & Security > Screen & System Audio Recording. Turn Tone on there.
 
-Tone checks the permission state before it taps anything. If the check isn't available and a tap delivers only silence while the app is playing, Tone removes its taps so the app's audio isn't lost, then shows the banner.
+Tone checks the permission state before it taps anything. If the check isn't available and a tap delivers only silence while the app is playing, Tone removes its taps so the app's audio isn't lost, then shows the same menu item.
 
-Launch at login uses `SMAppService`. Turn it on in Sound Settings… inside Tone.
+Open at login uses `SMAppService`. Turn it on in Settings… in Tone's menu.
 
 ## How it works
 
@@ -73,7 +75,16 @@ The tap and the aggregate are private to Tone's process. If Tone quits or crashe
 
 ## Testing hooks
 
-Tone has an opt-in debug mode for scripted tests. Turn it on with `defaults write com.gooober.tone DebugControl -bool YES`. Tone then writes per-tap stats every second to `~/Library/Logs/Tone/diagnostics.log`, including callbacks, input and output peak, gain ratio and processor overloads. It also accepts the distributed notification `com.gooober.tone.debug.set` with a `key` (bundle ID) plus `volume`, `eqEnabled` or `preset`. Turn it off with `defaults delete com.gooober.tone DebugControl`.
+Tone has an opt-in debug mode for scripted tests. Turn it on with `defaults write com.gooober.tone DebugControl -bool YES`. Tone then writes per-tap stats every second to `~/Library/Logs/Tone/diagnostics.log`, including callbacks, input and output peak, gain ratio and processor overloads. It also accepts these distributed notifications:
+
+- `com.gooober.tone.debug.set` with a `key` (bundle ID) plus `volume`, `eqEnabled` or `preset` changes an app's settings.
+- `com.gooober.tone.debug.panel` opens the menu at the top right of the screen for 12 seconds.
+- `com.gooober.tone.debug.settings` opens the Settings window.
+- `com.gooober.tone.debug.equalizer` opens the equalizer of the first app in the menu.
+
+Two more defaults only apply in debug mode. `DebugKeys`, for example `"up up right"`, replays arrow keys into the menu after `debug.panel` opens it. `DebugAppearance` set to `light` or `dark` overrides the system appearance.
+
+Turn debug mode off with `defaults delete com.gooober.tone DebugControl`.
 
 ## Privacy checks
 
@@ -90,7 +101,7 @@ Signing material (`*.p12`, `*.cer`, keys, keychains, `Signing.local.xcconfig`) i
 
 ## Known limits
 
-- Now Playing needs `media-control`. Since macOS 15.4 only Apple-entitled apps can read MediaRemote directly, and there's no public API for other apps' sessions. Without the tool the section shows an install hint.
+- Now Playing needs `media-control`. Since macOS 15.4 only Apple-entitled apps can read MediaRemote directly, and there's no public API for other apps' sessions. Without the tool the section is left out of the menu, and Settings says how to install it.
 - MediaRemote exposes one active session. Tone keeps earlier sessions listed as paused until their app quits, but only the active one accepts play/pause and next.
 - Command line tools are grouped under the app that launched them. For example, `afplay` started from Terminal shows up as Terminal.
 - If an output device also has input channels, such as a USB headset, the aggregate lists those first. Tone reads the tap from the last input stream.
