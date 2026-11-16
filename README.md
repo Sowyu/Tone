@@ -10,7 +10,7 @@ The design is Jace's sound mixer concept (JaceThings on X): https://x.com/JaceTh
 
 ## Design
 
-The UI follows the concept video frame by frame and uses system parts wherever the video does. The panel is Liquid Glass with semantic colors. Every slider is a native `Slider`, so the knob turns into a glass lens while you drag it. The EQ is a real `NSPopover` whose arrow points at the Preset row. Its curve is the actual magnitude response of the biquads the DSP runs, so Width (Q) changes the shape between the points. Section, row and preset changes all animate with one 0.32 s spring, which falls back to a short fade under Reduce Motion. On macOS 15 the panel uses the menu material instead of glass.
+Tone is a real `NSMenu` on its status item, so the glass, hover highlight, keyboard navigation, section headers, separators and submenus are the system's own. Rows that need a slider, a device icon or album art are SwiftUI views in custom menu items. AppKit still tracks their hover and keyboard highlight, and they draw the same accent highlight native items use (5.5 pt inset, 6 pt corners, measured on macOS 27). Each app has a native submenu with its volume slider, Equalizer, Preset and Always Show. The EQ opens in its own panel. Its curve is the actual magnitude response of the biquads the DSP runs.
 
 ## Requirements
 

@@ -23,11 +23,9 @@ final class AppModel {
     @ObservationIgnored let engine = AudioEngine()
 
     // UI state
-    var openSections: Set<PopoverSection> { didSet { store.state.openSections = Array(openSections) } }
-    var expandedRow: String?
-    var eqTarget: String?
-    var dragging: String?
-    var isPanelOpen = false
+    /// True while the menu is open; rows only animate (marquee) then.
+    var isMenuOpen = false
+    /// UID of the Bluetooth output whose listening modes are expanded.
     var expandedDevice: String?
 
     /// Apps that produced audio at least once since they launched.
@@ -36,7 +34,6 @@ final class AppModel {
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
 
     init() {
-        openSections = Set(store.state.openSections)
         devices.onDefaultOutputChanged = { [weak self] _ in self?.outputDeviceChanged() }
         processes.onChange = { [weak self] in self?.syncEngine() }
         engine.onSuspectedPermissionDenial = { [weak self] in self?.permission.markDenied() }
@@ -185,8 +182,6 @@ final class AppModel {
     func hide(_ key: String) {
         if !store.state.hidden.contains(key) { store.state.hidden.append(key) }
         store.state.pinned.removeAll { $0 == key }
-        if expandedRow?.hasSuffix(key) == true { expandedRow = nil }
-        if eqTarget == key { eqTarget = nil }
     }
 
     func unhide(_ key: String) { store.state.hidden.removeAll { $0 == key } }

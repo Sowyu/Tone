@@ -16,23 +16,23 @@ enum ToneMain {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var model: AppModel!
-    private var panel: PanelController!
+    private var menu: MenuController!
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         model = AppModel()
-        panel = PanelController(model: model) { [weak self] in self?.showSettings() }
+        menu = MenuController(model: model) { [weak self] in self?.showSettings() }
         if ProcessInfo.processInfo.arguments.contains("--open") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { MainActor.assumeIsolated { self.panel.show() } }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { MainActor.assumeIsolated { self.menu.open() } }
         }
         if Diagnostics.shared.enabled {
             DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.panel"), object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.panel.toggleFromDebug() }
+                MainActor.assumeIsolated { self?.menu.open() }
             }
             DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.expand"), object: nil, queue: .main) { [weak self] note in
                 let row = note.userInfo?["row"] as? String ?? ""
                 let eq = (note.userInfo?["eq"] as? NSNumber)?.boolValue ?? false
-                MainActor.assumeIsolated { self?.panel.expandFromDebug(row: row, eq: eq) }
+                MainActor.assumeIsolated { _ = (row, eq); self?.menu.open() }
             }
         }
     }
@@ -42,7 +42,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showSettings() {
-        panel.close()
         if settingsWindow == nil {
             let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView().environment(model)))
             window.title = "Tone Settings"

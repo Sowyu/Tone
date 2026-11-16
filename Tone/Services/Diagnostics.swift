@@ -31,8 +31,13 @@ final class Diagnostics {
             let preset = info["preset"] as? String
             let output = info["output"] as? String
             let engineOutput = info["engineOutput"] as? String
+            let listening = (info["listeningMode"] as? NSNumber)?.uint8Value
             MainActor.assumeIsolated {
                 if let engineOutput { self.model?.engine.setOutputDevice(uid: engineOutput) }
+                if let listening, let mode = ListeningMode(rawValue: listening), let model = self.model,
+                   let device = model.devices.outputDevices.first(where: \.isBluetooth) {
+                    model.bluetooth.setListeningMode(mode, for: device)
+                }
                 self.handle(key: key, volume: volume, eq: eq, preset: preset, output: output)
             }
         }

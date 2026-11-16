@@ -43,6 +43,9 @@ struct BluetoothDetails: Equatable {
     var battery: BatteryLevel?
     var listeningMode: ListeningMode?
     var modes: [ListeningMode] = []
+
+    /// Prefers the stack copy that actually reports AirPods state.
+    var score: Int { modes.count * 10 + (battery == nil ? 0 : 1) }
 }
 
 /// Bluetooth audio devices: paired-but-disconnected ones to connect from the
@@ -76,16 +79,23 @@ final class BluetoothAudio {
 
     /// Reads paired devices. Called while the Output section is visible, so the
     /// Bluetooth permission prompt only appears once someone looks at it.
-    func refresh() {
+    ///
+    /// macOS 27 lists dual-mode devices (AirPods, most headphones) twice, once per
+    /// Bluetooth stack, and the copy that isn't carrying audio reports
+    /// disconnected. Copies are merged by address, and a device counts as
+    /// connected if any copy is connected or Core Audio has an output for it.
+    func refresh(coreAudioIDs: Set<String> = []) {
         let audio = ((IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice]) ?? [])
             .filter { $0.deviceClassMajor == UInt32(kBluetoothDeviceClassMajorAudio) }
+        let byAddress = Dictionary(grouping: audio.filter { $0.addressString != nil }) { Self.normalize($0.addressString!) }
         var offline: [Paired] = []
         var online: [String: BluetoothDetails] = [:]
-        for device in audio {
-            guard let address = device.addressString, let name = device.name else { continue }
-            let id = Self.normalize(address)
-            if device.isConnected() {
-                online[id] = Self.readDetails(device)
+        for (id, copies) in byAddress {
+            guard let first = copies.first, let address = first.addressString,
+                  let name = copies.compactMap(\.name).first else { continue }
+            if copies.contains(where: { $0.isConnected() }) || coreAudioIDs.contains(id) {
+                // Read from whichever copy answers; the audio copy has the AirPods state.
+                online[id] = copies.map(Self.readDetails).max { $0.score < $1.score }
             } else {
                 offline.append(Paired(id: id, address: address, name: name,
                                       symbol: AudioDevice.symbol(name: name, transport: kAudioDeviceTransportTypeBluetooth)))
@@ -98,15 +108,19 @@ final class BluetoothAudio {
 
     func setListeningMode(_ mode: ListeningMode, for device: AudioDevice) {
         let id = Self.normalize(device.uid)
-        guard let bt = IOBluetoothDevice(addressString: String(device.uid.prefix(17))) ?? Self.paired(id) else { return }
-        PrivateBT.set(bt, "setListeningMode:", mode.rawValue)
+        let copies = Self.paired(id)
+        for bt in copies where PrivateBT.uint8(bt, "listeningMode") != nil {
+            let before = PrivateBT.uint8(bt, "listeningMode") ?? 0
+            PrivateBT.set(bt, "setListeningMode:", mode.rawValue)
+            AudioEngine.log.notice("setListeningMode \(mode.rawValue): before=\(before) after=\(PrivateBT.uint8(bt, "listeningMode") ?? 0) connected=\(bt.isConnected())")
+        }
         details[id]?.listeningMode = mode
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { MainActor.assumeIsolated { self.refresh() } }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { MainActor.assumeIsolated { self.refresh(coreAudioIDs: [id]) } }
     }
 
-    private static func paired(_ id: String) -> IOBluetoothDevice? {
+    private static func paired(_ id: String) -> [IOBluetoothDevice] {
         ((IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice]) ?? [])
-            .first { $0.addressString.map(normalize) == id }
+            .filter { $0.addressString.map(normalize) == id }
     }
 
     private static func readDetails(_ device: IOBluetoothDevice) -> BluetoothDetails {
@@ -135,8 +149,8 @@ final class BluetoothAudio {
                 }
             }
         }
-        AudioEngine.log.info("""
-            BT \(device.name ?? "?", privacy: .public) mode=\(current?.rawValue ?? 0) configs=\(configs) \
+        AudioEngine.log.notice("""
+            BT copy connected=\(device.isConnected()) mode=\(current?.rawValue ?? 0) configs=\(configs) \
             anc=\(anc) transparency=\(transparency) L=\(battery.left ?? -1) R=\(battery.right ?? -1) main=\(battery.main ?? -1)
             """)
         return BluetoothDetails(battery: battery.buds == nil && battery.main == nil ? nil : battery,
@@ -167,7 +181,7 @@ final class BluetoothAudio {
         if let match = devices.outputDevices.first(where: { Self.normalize($0.uid) == device.id || $0.name == device.name }) {
             devices.setDefaultOutput(match)
             connecting.remove(device.id)
-            refresh()
+            refresh(coreAudioIDs: [device.id])
             return
         }
         guard attempts > 0 else {
