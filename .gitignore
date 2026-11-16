@@ -1,0 +1,29 @@
+# Build output
+build/
+DerivedData/
+*.xcarchive
+.build/
+
+# Xcode user state
+*.xcuserstate
+xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+
+# Signing material and secrets: never commit
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+*.keychain*
+*.pem
+*.key
+signing/
+*.local.xcconfig
+.env*
+
+# Local privacy rules for the gitleaks hook
+.gitleaks.local.toml

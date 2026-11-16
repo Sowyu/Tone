@@ -1,0 +1,7 @@
+# Shared gitleaks config: the default rule set.
+# Personal identifiers live in the gitignored .gitleaks.local.toml, which
+# extends this file. See README > Privacy checks.
+title = "Tone"
+
+[extend]
+useDefault = true

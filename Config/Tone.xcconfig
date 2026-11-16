@@ -1,0 +1,9 @@
+// Shared build settings. The signing identity comes from the gitignored
+// Signing.local.xcconfig (copy Signing.example.xcconfig to create it).
+TONE_SIGNING_IDENTITY =
+#include? "Signing.local.xcconfig"
+
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = $(TONE_SIGNING_IDENTITY)
+DEVELOPMENT_TEAM =
+OTHER_CODE_SIGN_FLAGS = --timestamp=none

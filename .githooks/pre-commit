@@ -1,0 +1,23 @@
+#!/bin/bash
+# Blocks commits containing secrets or personal identifiers.
+# Enable once per clone: git config core.hooksPath .githooks
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not installed (brew install gitleaks)" >&2
+  exit 1
+fi
+
+root="$(git rev-parse --show-toplevel)"
+config="$root/.gitleaks.toml"
+# The local file adds private patterns (email, names) without committing them.
+[ -f "$root/.gitleaks.local.toml" ] && config="$root/.gitleaks.local.toml"
+
+gitleaks git --staged --no-banner --redact --config "$config" "$root"
+
+# Author/committer identity must be the no-reply address.
+email="$(git config --get user.email || true)"
+case "$email" in
+  *@users.noreply.github.com) ;;
+  *) echo "pre-commit: user.email is not a GitHub no-reply address" >&2; exit 1 ;;
+esac

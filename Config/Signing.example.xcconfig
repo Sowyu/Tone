@@ -1,0 +1,3 @@
+// Copy to Config/Signing.local.xcconfig (gitignored) and keep the name stable.
+// Create the identity once with scripts/create-signing-identity.sh.
+TONE_SIGNING_IDENTITY = Tone Local Signing
