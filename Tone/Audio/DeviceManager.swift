@@ -1,4 +1,6 @@
+import AppKit
 import AudioToolbox
+import IOKit.ps
 import CoreAudio
 import Foundation
 import Observation
@@ -8,17 +10,60 @@ struct AudioDevice: Identifiable, Hashable, Sendable {
     let uid: String
     let name: String
     let transport: UInt32
+    /// Resolved once, not on every render.
+    let symbol: String
 
-    var symbol: String {
-        switch transport {
-        case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: "headphones"
-        case kAudioDeviceTransportTypeAirPlay: "airplayaudio"
-        case kAudioDeviceTransportTypeHDMI, kAudioDeviceTransportTypeDisplayPort: "tv"
-        case kAudioDeviceTransportTypeUSB: "cable.connector"
-        case kAudioDeviceTransportTypeVirtual, kAudioDeviceTransportTypeAggregate: "square.stack.3d.up"
-        default: "speaker.wave.2"
-        }
+    init(id: AudioObjectID, uid: String, name: String, transport: UInt32) {
+        self.id = id
+        self.uid = uid
+        self.name = name
+        self.transport = transport
+        symbol = Self.symbol(name: name, transport: transport)
     }
+
+    var isBluetooth: Bool {
+        transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE
+    }
+
+    /// The same glyphs the system Sound menu uses: what the device is, not its role.
+    private static func symbol(name: String, transport: UInt32) -> String {
+        let n = name.lowercased()
+        let candidates: [String]
+        if n.contains("airpods pro") { candidates = ["airpods.pro", "airpodspro", "headphones"] }
+        else if n.contains("airpods max") { candidates = ["airpods.max", "airpodsmax", "headphones"] }
+        else if n.contains("airpods") { candidates = ["airpods", "headphones"] }
+        else if n.contains("beats") { candidates = ["beats.headphones", "headphones"] }
+        else if n.contains("homepod") { candidates = ["homepod.fill", "hifispeaker.fill"] }
+        else {
+            switch transport {
+            case kAudioDeviceTransportTypeBuiltIn:
+                candidates = [MacModel.isLaptop ? "laptopcomputer" : "desktopcomputer"]
+            case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE:
+                candidates = ["headphones"]
+            case kAudioDeviceTransportTypeAirPlay:
+                candidates = ["airplayaudio"]
+            case kAudioDeviceTransportTypeHDMI, kAudioDeviceTransportTypeDisplayPort, kAudioDeviceTransportTypeThunderbolt:
+                candidates = ["display"]
+            case kAudioDeviceTransportTypeVirtual, kAudioDeviceTransportTypeAggregate:
+                candidates = ["waveform"]
+            default:
+                candidates = n.contains("mic") ? ["mic.fill"] : (n.contains("head") ? ["headphones"] : ["hifispeaker.fill"])
+            }
+        }
+        return candidates.first { NSImage(systemSymbolName: $0, accessibilityDescription: nil) != nil } ?? "speaker.wave.2.fill"
+    }
+}
+
+enum MacModel {
+    /// A Mac with an internal battery is a laptop.
+    static let isLaptop: Bool = {
+        guard let info = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let list = IOPSCopyPowerSourcesList(info)?.takeRetainedValue() as? [CFTypeRef] else { return false }
+        return list.contains { source in
+            let d = IOPSGetPowerSourceDescription(info, source)?.takeUnretainedValue() as? [String: Any]
+            return d?[kIOPSTypeKey] as? String == kIOPSInternalBatteryType
+        }
+    }()
 }
 
 /// Lists output/input devices, tracks the system defaults and the master volume.

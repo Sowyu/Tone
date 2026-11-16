@@ -23,6 +23,7 @@ final class PanelController: NSObject {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let panel: TonePanel
     private var clickMonitor: Any?
+    private var inputModeMonitor: Any?
 
     init(model: AppModel, openSettings: @escaping () -> Void) {
         self.model = model
@@ -117,6 +118,12 @@ final class PanelController: NSObject {
         DispatchQueue.main.async { MainActor.assumeIsolated { _ = self.panel.makeFirstResponder(nil) } }
         button.highlight(true)
 
+        KeyboardMode.shared.active = false
+        inputModeMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .rightMouseDown]) { event in
+            MainActor.assumeIsolated { KeyboardMode.shared.active = event.type == .keyDown }
+            return event
+        }
+        model.battery.refreshIfStale()
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
             MainActor.assumeIsolated { self?.close() }
         }
@@ -126,7 +133,9 @@ final class PanelController: NSObject {
         guard panel.isVisible else { return }
         AudioEngine.log.info("Panel close")
         if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
+        if let inputModeMonitor { NSEvent.removeMonitor(inputModeMonitor) }
         clickMonitor = nil
+        inputModeMonitor = nil
         model.isPanelOpen = false
         model.eqTarget = nil
         panel.orderOut(nil)

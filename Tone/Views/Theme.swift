@@ -14,8 +14,8 @@ enum Metrics {
     static let width: CGFloat = 308
     static let cornerRadius: CGFloat = 16
     static let inset: CGFloat = 14          // text and separator inset
-    static let highlightInset: CGFloat = 6  // hover highlight inset from the panel edge
-    static let highlightRadius: CGFloat = 8
+    static let highlightInset: CGFloat = 5  // hover highlight inset from the panel edge
+    static let highlightRadius: CGFloat = 6
     static let sectionRowHeight: CGFloat = 33
     static let artwork: CGFloat = 40
     static let appIcon: CGFloat = 18
@@ -51,6 +51,14 @@ struct VisualEffectBackground: NSViewRepresentable {
     func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
 
+/// True while the user moves around with the keyboard. Focus highlights only
+/// show then, so a click never leaves a second highlight behind.
+@MainActor @Observable
+final class KeyboardMode {
+    static let shared = KeyboardMode()
+    var active = false
+}
+
 /// Rounded hover highlight inset from the panel edge, like menu items.
 struct HoverHighlight: ViewModifier {
     var focused: Bool
@@ -63,7 +71,7 @@ struct HoverHighlight: ViewModifier {
                 RoundedRectangle(cornerRadius: Metrics.highlightRadius, style: .continuous)
                     .fill(.quaternary)
                     .padding(.horizontal, Metrics.highlightInset)
-                    .opacity(hovering || focused ? 1 : 0)
+                    .opacity(hovering || (focused && KeyboardMode.shared.active) ? 1 : 0)
             }
             .onHover { hovering = $0 }
     }

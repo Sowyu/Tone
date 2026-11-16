@@ -1,3 +1,4 @@
+import AppKit
 import CoreAudio
 import SwiftUI
 
@@ -62,6 +63,7 @@ struct AccordionSection: View {
 }
 
 struct DeviceList: View {
+    @Environment(AppModel.self) private var model
     let devices: [AudioDevice]
     let selected: AudioObjectID
     let choose: (AudioDevice) -> Void
@@ -70,38 +72,74 @@ struct DeviceList: View {
         VStack(spacing: 0) {
             if devices.isEmpty { EmptyHint(text: "No devices") }
             ForEach(devices) { device in
-                DeviceRow(device: device, isSelected: device.id == selected) { choose(device) }
+                DeviceRow(device: device, isSelected: device.id == selected,
+                          battery: model.battery.level(for: device)) { choose(device) }
             }
         }
         .padding(.bottom, 4)
     }
 }
 
-/// Same shape as the device rows in the system Sound menu.
+/// Matches the device rows in the system Sound menu: the device's own glyph in a
+/// 26 pt circle (accent when selected), earbud battery under the name, and
+/// headphone battery on the right.
 private struct DeviceRow: View {
     let device: AudioDevice
     let isSelected: Bool
+    let battery: BatteryLevel?
     let action: () -> Void
     @FocusState private var focused: Bool
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(spacing: 9) {
                 Image(systemName: device.symbol)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary)))
-                Text(device.name).lineLimit(1)
-                Spacer(minLength: 0)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(Color.primary.opacity(0.75)))
+                    .frame(width: 26, height: 26)
+                    .background(Circle().fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.1))))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(device.name).lineLimit(1)
+                    if let buds = battery?.buds {
+                        HStack(spacing: 3) {
+                            Image(systemName: Self.symbol("airpod.left", fallback: "earbuds"))
+                                .font(.system(size: 9))
+                            Text("\(buds)%")
+                        }
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 4)
+                if battery?.buds == nil, let main = battery?.main {
+                    Text("\(main)%").foregroundStyle(.secondary)
+                    Image(systemName: Self.batterySymbol(main))
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.horizontal, Metrics.inset)
-            .frame(height: 30)
+            .frame(minHeight: 31)
             .hoverHighlight(focused: focused)
         }
         .buttonStyle(.plain)
         .focusRow($focused, action: action)
+        .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    static func batterySymbol(_ percent: Int) -> String {
+        switch percent {
+        case ..<13: "battery.0percent"
+        case ..<38: "battery.25percent"
+        case ..<63: "battery.50percent"
+        case ..<88: "battery.75percent"
+        default: "battery.100percent"
+        }
+    }
+
+    static func symbol(_ name: String, fallback: String) -> String {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil ? name : fallback
     }
 }
 

@@ -135,7 +135,7 @@ private struct RowBackground: ViewModifier {
         } else {
             content
                 .contentShape(Rectangle())
-                .background(Color.primary.opacity(hovering || focused ? 0.05 : 0))
+                .background(Color.primary.opacity(hovering || (focused && KeyboardMode.shared.active) ? 0.05 : 0))
                 .onHover { hovering = $0 }
         }
     }
