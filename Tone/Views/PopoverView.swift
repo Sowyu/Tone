@@ -60,7 +60,7 @@ struct PopoverView: View {
                     Text("⌘ ,").foregroundStyle(.tertiary)
                 }
                 .padding(.horizontal, Metrics.inset)
-                .frame(height: Metrics.sectionRowHeight)
+                .frame(height: Metrics.rowHeight)
                 .hoverHighlight(focused: settingsFocused)
             }
             .buttonStyle(.plain)

@@ -20,6 +20,7 @@ final class AppModel {
     let store = SettingsStore()
     let permission = CapturePermission()
     let battery = BluetoothBattery()
+    let bluetooth = BluetoothAudio()
     @ObservationIgnored let engine = AudioEngine()
 
     // UI state

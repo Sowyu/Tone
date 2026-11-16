@@ -23,7 +23,7 @@ struct AccordionSection: View {
                         .rotationEffect(.degrees(isOpen ? 90 : 0))
                 }
                 .padding(.horizontal, Metrics.inset)
-                .frame(height: Metrics.sectionRowHeight)
+                .frame(height: Metrics.rowHeight)
                 .hoverHighlight(focused: focused)
             }
             .buttonStyle(.plain)
@@ -47,7 +47,7 @@ struct AccordionSection: View {
     @ViewBuilder private var content: some View {
         switch section {
         case .output:
-            DeviceList(devices: model.devices.outputDevices, selected: model.devices.defaultOutputID) {
+            DeviceList(devices: model.devices.outputDevices, selected: model.devices.defaultOutputID, showsPaired: true) {
                 model.devices.setDefaultOutput($0)
             }
         case .input:
@@ -66,17 +66,29 @@ struct DeviceList: View {
     @Environment(AppModel.self) private var model
     let devices: [AudioDevice]
     let selected: AudioObjectID
+    var showsPaired = false
     let choose: (AudioDevice) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             if devices.isEmpty { EmptyHint(text: "No devices") }
             ForEach(devices) { device in
-                DeviceRow(device: device, isSelected: device.id == selected,
+                DeviceRow(name: device.name, symbol: device.symbol, isSelected: device.id == selected,
                           battery: model.battery.level(for: device)) { choose(device) }
+            }
+            if showsPaired {
+                // Paired but not connected, like the system menu: click to connect.
+                ForEach(model.bluetooth.disconnected) { paired in
+                    DeviceRow(name: paired.name, symbol: paired.symbol, isSelected: false, battery: nil,
+                              isConnecting: model.bluetooth.connecting.contains(paired.id)) {
+                        model.bluetooth.connect(paired, devices: model.devices)
+                    }
+                }
             }
         }
         .padding(.bottom, 4)
+        .onAppear { if showsPaired { model.bluetooth.refresh() } }
+        .onChange(of: devices) { if showsPaired { model.bluetooth.refresh() } }
     }
 }
 
@@ -84,22 +96,30 @@ struct DeviceList: View {
 /// 26 pt circle (accent when selected), earbud battery under the name, and
 /// headphone battery on the right.
 private struct DeviceRow: View {
-    let device: AudioDevice
+    let name: String
+    let symbol: String
     let isSelected: Bool
     let battery: BatteryLevel?
+    var isConnecting = false
     let action: () -> Void
     @FocusState private var focused: Bool
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 9) {
-                Image(systemName: device.symbol)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(Color.primary.opacity(0.75)))
-                    .frame(width: 26, height: 26)
-                    .background(Circle().fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.1))))
+                ZStack {
+                    Circle().fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.1)))
+                    if isConnecting {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: symbol)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(Color.primary.opacity(0.75)))
+                    }
+                }
+                .frame(width: 26, height: 26)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(device.name).lineLimit(1)
+                    Text(name).lineLimit(1)
                     if let buds = battery?.buds {
                         HStack(spacing: 3) {
                             Image(systemName: Self.symbol("airpod.left", fallback: "earbuds"))
@@ -119,7 +139,7 @@ private struct DeviceRow: View {
                 }
             }
             .padding(.horizontal, Metrics.inset)
-            .frame(minHeight: 31)
+            .frame(minHeight: Metrics.rowHeight)
             .hoverHighlight(focused: focused)
         }
         .buttonStyle(.plain)

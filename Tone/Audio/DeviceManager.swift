@@ -26,7 +26,7 @@ struct AudioDevice: Identifiable, Hashable, Sendable {
     }
 
     /// The same glyphs the system Sound menu uses: what the device is, not its role.
-    private static func symbol(name: String, transport: UInt32) -> String {
+    static func symbol(name: String, transport: UInt32) -> String {
         let n = name.lowercased()
         let candidates: [String]
         if n.contains("airpods pro") { candidates = ["airpods.pro", "airpodspro", "headphones"] }

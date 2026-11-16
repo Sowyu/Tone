@@ -19,6 +19,7 @@
 		68B7503F66B88D6B681C6ED7 /* AppTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9C3645F36384E001CC14AF /* AppTap.swift */; };
 		8209ACAE40D8C481A110519A /* BluetoothBattery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 146751EAAC22BA534FA3E2C5 /* BluetoothBattery.swift */; };
 		849E32C87FD4293F771FD0D2 /* CoreAudioHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C13C1451C053FF07E75DF7 /* CoreAudioHelpers.swift */; };
+		85D2BDBEED79FBE4A645ABFB /* BluetoothAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */; };
 		89198E567D1456C3C64C375D /* PresetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2CE59D657ABB101D11E2DC /* PresetStore.swift */; };
 		96E3D5D072C4944E4B4E2844 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80903A636F9301DA72A58E72 /* SettingsView.swift */; };
 		9EC112EEB6A0816A3C26D10D /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F5DB02E3299738531A9DA /* Theme.swift */; };
@@ -54,6 +55,7 @@
 		BDD5C7F7CD7B78C6F437BF01 /* SectionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionViews.swift; sourceTree = "<group>"; };
 		C6008A5584013B1828B22A76 /* Tone.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Tone.xcconfig; sourceTree = "<group>"; };
 		CD49804B183AAE4F18CD66B3 /* ProcessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessMonitor.swift; sourceTree = "<group>"; };
+		D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothAudio.swift; sourceTree = "<group>"; };
 		DF920145CE6D8865F9540019 /* NowPlayingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingService.swift; sourceTree = "<group>"; };
 		F5017695FF684B1249D6CC57 /* PanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelController.swift; sourceTree = "<group>"; };
 		F7CBDBA0450A640395E56066 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -92,6 +94,7 @@
 			isa = PBXGroup;
 			children = (
 				F7CBDBA0450A640395E56066 /* AppModel.swift */,
+				D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */,
 				146751EAAC22BA534FA3E2C5 /* BluetoothBattery.swift */,
 				8DC86D0145E94528DDEE74CC /* Diagnostics.swift */,
 				40E22F670B162357A0367306 /* Models.swift */,
@@ -219,6 +222,7 @@
 				4D2FD0561B35C8A9AD16EB16 /* AppModel.swift in Sources */,
 				68B7503F66B88D6B681C6ED7 /* AppTap.swift in Sources */,
 				A581E5FB0204646B4B48E771 /* AudioEngine.swift in Sources */,
+				85D2BDBEED79FBE4A645ABFB /* BluetoothAudio.swift in Sources */,
 				8209ACAE40D8C481A110519A /* BluetoothBattery.swift in Sources */,
 				53A71209E40CEA79D882DA1D /* CapturePermission.swift in Sources */,
 				849E32C87FD4293F771FD0D2 /* CoreAudioHelpers.swift in Sources */,

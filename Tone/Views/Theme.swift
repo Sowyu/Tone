@@ -14,9 +14,10 @@ enum Metrics {
     static let width: CGFloat = 308
     static let cornerRadius: CGFloat = 16
     static let inset: CGFloat = 14          // text and separator inset
-    static let highlightInset: CGFloat = 5  // hover highlight inset from the panel edge
-    static let highlightRadius: CGFloat = 6
-    static let sectionRowHeight: CGFloat = 33
+    // Measured from the system Sound menu: 32 pt rows, 4.5 pt inset, 9 pt continuous corners, 9% fill.
+    static let highlightInset: CGFloat = 4.5
+    static let highlightRadius: CGFloat = 9
+    static let rowHeight: CGFloat = 32
     static let artwork: CGFloat = 40
     static let appIcon: CGFloat = 18
 }
@@ -69,7 +70,7 @@ struct HoverHighlight: ViewModifier {
             .contentShape(Rectangle())
             .background {
                 RoundedRectangle(cornerRadius: Metrics.highlightRadius, style: .continuous)
-                    .fill(.quaternary)
+                    .fill(Color.primary.opacity(0.09))
                     .padding(.horizontal, Metrics.highlightInset)
                     .opacity(hovering || (focused && KeyboardMode.shared.active) ? 1 : 0)
             }

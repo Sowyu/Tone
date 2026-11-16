@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Tone taps each app's audio so it can change that app's volume and EQ. The audio stays on your Mac and is never recorded.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Tone lists your paired Bluetooth headphones and speakers so you can connect them as the sound output.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>MIT License</string>
 </dict>
