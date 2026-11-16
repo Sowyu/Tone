@@ -25,8 +25,6 @@ final class AppModel {
     // UI state
     /// True while the menu is open; rows only animate (marquee) then.
     var isMenuOpen = false
-    /// UID of the Bluetooth output whose listening modes are expanded.
-    var expandedDevice: String?
 
     /// Apps that produced audio at least once since they launched.
     @ObservationIgnored private var everPlayed = Set<String>()

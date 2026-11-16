@@ -113,139 +113,6 @@ struct MasterSliderRow: View {
     }
 }
 
-// MARK: Devices
-
-/// Same layout as the device rows in the system Sound menu.
-struct DeviceRowView: View {
-    let state: RowState
-    let name: String
-    let symbol: String
-    let isSelected: Bool
-    var battery: BatteryLevel?
-    var isConnecting = false
-    var expandable = false
-    var expanded = false
-    var onToggleExpand: () -> Void = {}
-    let activate: () -> Void
-
-    var body: some View {
-        let on = state.highlighted
-        Button(action: activate) {
-            HStack(spacing: 9) {
-                ZStack {
-                    Circle().fill(isSelected ? AnyShapeStyle(Color.accentColor)
-                                             : AnyShapeStyle(on ? Color.white.opacity(0.25) : Color.primary.opacity(0.1)))
-                    if isConnecting {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        Image(systemName: symbol)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(isSelected || on ? AnyShapeStyle(Color.white) : AnyShapeStyle(Color.primary.opacity(0.75)))
-                    }
-                }
-                .frame(width: 26, height: 26)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(name).lineLimit(1)
-                    if let buds = battery?.buds {
-                        HStack(spacing: 3) {
-                            Image(systemName: "airpod.left").font(.system(size: 9))
-                            Text("\(buds)%")
-                        }
-                        .font(.system(size: 11))
-                        .secondaryText(on)
-                    }
-                }
-                Spacer(minLength: 4)
-                if battery?.buds == nil, let main = battery?.main {
-                    Text("\(main)%").secondaryText(on)
-                    Image(systemName: Self.batterySymbol(main)).secondaryText(on)
-                }
-                if expandable {
-                    Button(action: onToggleExpand) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .rotationEffect(.degrees(expanded ? 90 : 0))
-                            .secondaryText(on)
-                            .frame(width: 22, height: Metrics.deviceRowHeight)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(expanded ? "Hide listening modes" : "Show listening modes")
-                }
-            }
-            .font(.system(size: 13))
-            .padding(.horizontal, Metrics.inset)
-            .frame(height: Metrics.deviceRowHeight)
-            .contentShape(Rectangle())
-            .nativeHighlight(on)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    static func batterySymbol(_ percent: Int) -> String {
-        switch percent {
-        case ..<13: "battery.0percent"
-        case ..<38: "battery.25percent"
-        case ..<63: "battery.50percent"
-        case ..<88: "battery.75percent"
-        default: "battery.100percent"
-        }
-    }
-}
-
-/// "Listening Mode" choices under an expanded AirPods row: checkmark column, glyph, title.
-struct ModeRowView: View {
-    let state: RowState
-    let mode: ListeningMode
-    let isSelected: Bool
-    let activate: () -> Void
-
-    var body: some View {
-        let on = state.highlighted
-        Button(action: activate) {
-            HStack(spacing: 0) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .opacity(isSelected ? 1 : 0)
-                    .frame(width: 22, alignment: .leading)
-                ModeGlyph(mode: mode)
-                    .secondaryText(on)
-                    .frame(width: 28, alignment: .leading)
-                Text(mode.title)
-                Spacer(minLength: 0)
-            }
-            .font(.system(size: 13))
-            .padding(.leading, Metrics.inset)
-            .frame(height: Metrics.rowHeight)
-            .contentShape(Rectangle())
-            .nativeHighlight(on)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}
-
-private struct ModeGlyph: View {
-    let mode: ListeningMode
-
-    var body: some View {
-        Group {
-            switch mode {
-            case .off: Image(systemName: "person.fill")
-            case .transparency: Image(systemName: "person.and.background.dotted")
-            case .noiseCancellation: Image(systemName: "person.bust.circle.fill")
-            case .adaptive:
-                Image(systemName: "person.fill")
-                    .overlay(alignment: .topTrailing) {
-                        Image(systemName: "sparkle").font(.system(size: 7, weight: .bold)).offset(x: 5, y: -3)
-                    }
-            }
-        }
-        .font(.system(size: 14))
-    }
-}
-
 // MARK: Now Playing and apps
 
 struct SessionRowView: View {
@@ -279,7 +146,6 @@ struct SessionRowView: View {
             }
             .disabled(!session.isCurrent)
             .opacity(session.isCurrent ? 1 : 0.4)
-            SubmenuChevron(highlighted: on)
         }
         .font(.system(size: 13))
         .padding(.horizontal, Metrics.inset)
@@ -304,41 +170,6 @@ private struct MediaButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
-    }
-}
-
-struct AppRowView: View {
-    @Environment(AppModel.self) private var model
-    let state: RowState
-    let initial: AppRowItem
-
-    /// Read live so running state and name update while the menu is open.
-    private var item: AppRowItem { model.applicationRows.first { $0.id == initial.id } ?? initial }
-
-    var body: some View {
-        let item = self.item
-        let on = state.highlighted
-        let volume = model.settings(item.id).volume
-        HStack(spacing: 8) {
-            Image(nsImage: model.icon(item.id))
-                .resizable()
-                .interpolation(.high)
-                .frame(width: 18, height: 18)
-                .opacity(item.isRunning ? 1 : 0.5)
-            Text(item.name).lineLimit(1)
-            Spacer(minLength: 4)
-            if model.settings(item.id).eqEnabled {
-                Image(systemName: "slider.vertical.3").font(.system(size: 11)).secondaryText(on)
-            }
-            Text(volume.percent)
-                .monospacedDigit()
-                .foregroundStyle(volume > 1.0001 && !on ? AnyShapeStyle(Color.orange) : AnyShapeStyle(on ? Color.white.opacity(0.8) : Color.secondary))
-            SubmenuChevron(highlighted: on)
-        }
-        .font(.system(size: 13))
-        .padding(.horizontal, Metrics.inset)
-        .frame(height: Metrics.rowHeight)
-        .nativeHighlight(on)
     }
 }
 

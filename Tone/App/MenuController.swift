@@ -12,6 +12,7 @@ final class ActionItem: NSMenuItem {
         super.init(title: title, action: enabled ? #selector(run) : nil, keyEquivalent: key)
         self.state = state
         target = self
+        isEnabled = enabled
     }
 
     @available(*, unavailable) required init(coder: NSCoder) { fatalError() }
@@ -34,6 +35,8 @@ final class MenuController: NSObject, NSMenuDelegate {
     private var structure = ""
     private var eqWindows: [String: NSWindow] = [:]
     private var appSubmenus: [ObjectIdentifier: String] = [:]
+    private var deviceItems: [NSMenuItem] = []
+    private var appItems: [NSMenuItem] = []
 
     init(model: AppModel, openSettings: @escaping () -> Void) {
         self.model = model
@@ -44,6 +47,23 @@ final class MenuController: NSObject, NSMenuDelegate {
         statusItem.menu = menu
         statusItem.button?.setAccessibilityLabel("Tone")
         updateIcon()
+    }
+
+    private static func postKey(_ name: String) {
+        let (code, char): (UInt16, String) = switch name {
+        case "down": (125, "\u{F701}")
+        case "up": (126, "\u{F700}")
+        case "right": (124, "\u{F703}")
+        case "left": (123, "\u{F702}")
+        default: (36, "\r")
+        }
+        for type in [NSEvent.EventType.keyDown, .keyUp] {
+            if let event = NSEvent.keyEvent(with: type, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                            windowNumber: 0, context: nil, characters: char, charactersIgnoringModifiers: char,
+                                            isARepeat: false, keyCode: code) {
+                NSApp.postEvent(event, atStart: false)
+            }
+        }
     }
 
     /// Closes the menu from code (debug hook).
@@ -59,6 +79,14 @@ final class MenuController: NSObject, NSMenuDelegate {
             MainActor.assumeIsolated { self?.close() }
         }
         RunLoop.main.add(timer, forMode: .common)
+        // Debug: replay keys (defaults key DebugKeys, e.g. "down down right") to test highlight and submenus.
+        let keys = (UserDefaults.standard.string(forKey: "DebugKeys") ?? "").split(separator: " ")
+        for (i, key) in keys.enumerated() {
+            let t = Timer(timeInterval: 0.8 + Double(i) * 0.5, repeats: false) { _ in
+                MainActor.assumeIsolated { Self.postKey(String(key)) }
+            }
+            RunLoop.main.add(t, forMode: .common)
+        }
         menu.popUp(positioning: nil, at: NSPoint(x: frame.maxX - Metrics.menuWidth - 40, y: frame.maxY - 6), in: nil)
     }
 
@@ -109,14 +137,12 @@ final class MenuController: NSObject, NSMenuDelegate {
         withObservationTracking {
             _ = structureSignature()
         } onChange: { [weak self] in
-            DispatchQueue.main.async {
-                MainActor.assumeIsolated {
-                    guard let self, self.model.isMenuOpen, self.structureSignature() != self.structure else {
-                        self?.observeStructure()
-                        return
-                    }
-                    self.rebuild()
+            MainLoop.perform {
+                guard let self, self.model.isMenuOpen, self.structureSignature() != self.structure else {
+                    self?.observeStructure()
+                    return
                 }
+                self.rebuild()
             }
         }
     }
@@ -130,7 +156,7 @@ final class MenuController: NSObject, NSMenuDelegate {
             "\(d.defaultInputID)",
             bt.disconnected.map(\.id).joined(separator: ","),
             bt.details.map { "\($0.key):\($0.value.modes.count)" }.sorted().joined(separator: ","),
-            model.expandedDevice ?? "",
+            bt.details.map { "\($0.key):\($0.value.listeningMode?.rawValue ?? 0)" }.sorted().joined(separator: ","),
             model.nowPlayingRows.map(\.id).joined(separator: ","),
             "\(model.nowPlaying.availability)",
             model.applicationRows.map(\.id).joined(separator: ","),
@@ -143,6 +169,8 @@ final class MenuController: NSObject, NSMenuDelegate {
     private func rebuild() {
         structure = structureSignature()
         appSubmenus = [:]
+        deviceItems = []
+        appItems = []
         menu.removeAllItems()
 
         menu.addItem(viewItem { _ in HeaderRow() })
@@ -171,6 +199,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.addItem(settings)
 
         observeStructure()
+        observeContent()
     }
 
     private func viewItem<Content: View>(action: (@MainActor () -> Void)? = nil,
@@ -181,50 +210,63 @@ final class MenuController: NSObject, NSMenuDelegate {
         return item
     }
 
+    /// Output devices as native items: AppKit handles hover, click, keyboard and
+    /// submenus. The round icon and battery live in the attributed title.
     private func addOutputs() {
         let devices = model.devices
         for device in devices.outputDevices {
-            let details = model.bluetooth.details(for: device)
-            let expandable = !(details?.modes.isEmpty ?? true)
-            let expanded = expandable && model.expandedDevice == device.uid
-            var row: NSMenuItem?
-            row = viewItem(action: { devices.setDefaultOutput(device) }) { [weak self] state in
-                DeviceRowView(state: state, name: device.name, symbol: device.symbol,
-                              isSelected: self?.model.devices.defaultOutputID == device.id,
-                              battery: self?.model.bluetooth.details(for: device)?.battery,
-                              expandable: expandable, expanded: expanded,
-                              onToggleExpand: { self?.model.expandedDevice = expanded ? nil : device.uid },
-                              activate: { (row?.view as? MenuHostView)?.activate() })
+            let item = ActionItem("") { devices.setDefaultOutput(device) }
+            item.representedObject = device.uid
+            styleOutput(item)
+            if let details = model.bluetooth.details(for: device), !details.modes.isEmpty {
+                item.submenu = listeningMenu(for: device, details: details)
             }
-            menu.addItem(row!)
-            if expanded, let details {
-                let title = NSMenuItem.sectionHeader(title: "Listening Mode")
-                title.indentationLevel = 1
-                menu.addItem(title)
-                for mode in details.modes {
-                    var modeRow: NSMenuItem?
-                    modeRow = viewItem(action: { [weak self] in self?.model.bluetooth.setListeningMode(mode, for: device) }) { [weak self] state in
-                        ModeRowView(state: state, mode: mode,
-                                    isSelected: self?.model.bluetooth.details(for: device)?.listeningMode == mode,
-                                    activate: { (modeRow?.view as? MenuHostView)?.activate() })
-                    }
-                    menu.addItem(modeRow!)
-                }
-            }
+            deviceItems.append(item)
+            menu.addItem(item)
         }
         // Paired but disconnected, like the system Sound menu: click to connect.
         for paired in model.bluetooth.disconnected {
-            var row: NSMenuItem?
-            row = viewItem(action: { [weak self] in
+            let item = ActionItem("") { [weak self] in
                 guard let self else { return }
                 self.model.bluetooth.connect(paired, devices: self.model.devices)
-            }) { [weak self] state in
-                DeviceRowView(state: state, name: paired.name, symbol: paired.symbol, isSelected: false,
-                              isConnecting: self?.model.bluetooth.connecting.contains(paired.id) ?? false,
-                              activate: { (row?.view as? MenuHostView)?.activate() })
             }
-            menu.addItem(row!)
+            item.representedObject = "paired:" + paired.id
+            styleOutput(item)
+            deviceItems.append(item)
+            menu.addItem(item)
         }
+    }
+
+    /// Recomputes a device item's title from live state (selection, battery, connecting).
+    private func styleOutput(_ item: NSMenuItem) {
+        guard let id = item.representedObject as? String else { return }
+        if id.hasPrefix("paired:") {
+            let pid = String(id.dropFirst(7))
+            guard let paired = model.bluetooth.disconnected.first(where: { $0.id == pid }) else { return }
+            let connecting = model.bluetooth.connecting.contains(pid)
+            item.attributedTitle = MenuTitle.device(name: paired.name, symbol: paired.symbol, selected: false,
+                                                    trailing: connecting ? "Connecting…" : nil)
+            return
+        }
+        guard let device = model.devices.outputDevices.first(where: { $0.uid == id }) else { return }
+        let battery = model.bluetooth.details(for: device)?.battery
+        let trailing = battery.flatMap { $0.buds ?? $0.main }.map { "\($0)%" }
+        item.attributedTitle = MenuTitle.device(name: device.name, symbol: device.symbol,
+                                                selected: device.id == model.devices.defaultOutputID, trailing: trailing)
+    }
+
+    private func listeningMenu(for device: AudioDevice, details: BluetoothDetails) -> NSMenu {
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        submenu.addItem(.sectionHeader(title: "Listening Mode"))
+        for mode in details.modes {
+            let item = ActionItem(mode.title, state: details.listeningMode == mode ? .on : .off) { [weak self] in
+                self?.model.bluetooth.setListeningMode(mode, for: device)
+            }
+            item.attributedTitle = MenuTitle.symbol(MenuTitle.modeIcon(mode), title: mode.title)
+            submenu.addItem(item)
+        }
+        return submenu
     }
 
     private func inputMenu() -> NSMenu {
@@ -253,9 +295,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         let rows = model.nowPlayingRows
         if rows.isEmpty { menu.addItem(ActionItem("Not Playing", enabled: false) {}) }
         for session in rows {
-            let item = viewItem { state in SessionRowView(state: state, id: session.id) }
-            item.submenu = appMenu(for: session.id, movable: false)
-            menu.addItem(item)
+            menu.addItem(viewItem { state in SessionRowView(state: state, id: session.id) })
         }
     }
 
@@ -266,10 +306,42 @@ final class MenuController: NSObject, NSMenuDelegate {
         let rows = model.applicationRows
         if rows.isEmpty { menu.addItem(ActionItem("No Apps Playing Audio", enabled: false) {}) }
         for row in rows {
-            let item = viewItem { state in AppRowView(state: state, initial: row) }
+            let item = NSMenuItem(title: row.name, action: nil, keyEquivalent: "")
+            item.representedObject = row.id
             item.submenu = appMenu(for: row.id, movable: true)
+            styleApp(item)
+            appItems.append(item)
             menu.addItem(item)
         }
+    }
+
+    private func styleApp(_ item: NSMenuItem) {
+        guard let key = item.representedObject as? String else { return }
+        let settings = model.settings(key)
+        item.attributedTitle = MenuTitle.app(name: model.displayName(key), icon: model.icon(key),
+                                             percent: settings.volume.percent, overdrive: settings.volume > 1.0001,
+                                             dimmed: model.processes.apps[key] == nil)
+    }
+
+    /// Updates titles in place when values change, without rebuilding the menu.
+    private func observeContent() {
+        withObservationTracking {
+            _ = contentSignature()
+        } onChange: { [weak self] in
+            MainLoop.perform {
+                guard let self else { return }
+                self.deviceItems.forEach(self.styleOutput)
+                self.appItems.forEach(self.styleApp)
+                self.observeContent()
+            }
+        }
+    }
+
+    private func contentSignature() -> String {
+        let volumes = model.applicationRows.map { "\($0.id)=\(model.settings($0.id).volume)" }
+        let battery = model.bluetooth.details.map { "\($0.key)=\($0.value.battery?.buds ?? $0.value.battery?.main ?? -1)" }
+        return ([String(model.devices.defaultOutputID)] + volumes + battery.sorted()
+                + model.bluetooth.connecting.sorted()).joined(separator: ",")
     }
 
     // MARK: Per-app submenu
@@ -323,8 +395,10 @@ final class MenuController: NSObject, NSMenuDelegate {
         submenu.addItem(ActionItem("Hide") { [weak self] in self?.model.hide(key) })
         if movable {
             submenu.addItem(.separator())
-            submenu.addItem(ActionItem("Move Up") { [weak self] in self?.model.moveApp(key, by: -1) })
-            submenu.addItem(ActionItem("Move Down") { [weak self] in self?.model.moveApp(key, by: 1) })
+            let ids = model.applicationRows.map(\.id)
+            let index = ids.firstIndex(of: key) ?? 0
+            submenu.addItem(ActionItem("Move Up", enabled: index > 0) { [weak self] in self?.model.moveApp(key, by: -1) })
+            submenu.addItem(ActionItem("Move Down", enabled: index < ids.count - 1) { [weak self] in self?.model.moveApp(key, by: 1) })
         }
     }
 

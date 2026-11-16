@@ -25,6 +25,7 @@
 		9EC112EEB6A0816A3C26D10D /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390F5DB02E3299738531A9DA /* Theme.swift */; };
 		A581E5FB0204646B4B48E771 /* AudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B1A2DD6269A31B9E8E65BB7 /* AudioEngine.swift */; };
 		BB9803278E2BE04A7010A99C /* NowPlayingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF920145CE6D8865F9540019 /* NowPlayingService.swift */; };
+		CC39A06C5A9D88419CB5493F /* MenuTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E05735B93D1D1E582461BEC /* MenuTitle.swift */; };
 		D8F01597F5E757DE4FAB3847 /* ToneSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099B14BEB5BD4038D651E331 /* ToneSlider.swift */; };
 		F893F912F06BD55ABA17FEAF /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC86D0145E94528DDEE74CC /* Diagnostics.swift */; };
 /* End PBXBuildFile section */
@@ -33,6 +34,7 @@
 		097E3C1F38908281B4124E51 /* DSPKernel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSPKernel.swift; sourceTree = "<group>"; };
 		099B14BEB5BD4038D651E331 /* ToneSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneSlider.swift; sourceTree = "<group>"; };
 		1B1A2DD6269A31B9E8E65BB7 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
+		2E05735B93D1D1E582461BEC /* MenuTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuTitle.swift; sourceTree = "<group>"; };
 		390F5DB02E3299738531A9DA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		3D840D1782BD0E96D95E3170 /* MenuRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuRows.swift; sourceTree = "<group>"; };
 		3EF52BB07AD075A8A76A8388 /* EQPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EQPanel.swift; sourceTree = "<group>"; };
@@ -130,6 +132,7 @@
 			children = (
 				3EF52BB07AD075A8A76A8388 /* EQPanel.swift */,
 				3D840D1782BD0E96D95E3170 /* MenuRows.swift */,
+				2E05735B93D1D1E582461BEC /* MenuTitle.swift */,
 				80903A636F9301DA72A58E72 /* SettingsView.swift */,
 				390F5DB02E3299738531A9DA /* Theme.swift */,
 				099B14BEB5BD4038D651E331 /* ToneSlider.swift */,
@@ -222,6 +225,7 @@
 				0A0D7EFEEFDE0C67F3C84208 /* EQPanel.swift in Sources */,
 				21AAFD4119DD559C3C550D4C /* MenuController.swift in Sources */,
 				3C3DD00C09F66A09D940A9FB /* MenuRows.swift in Sources */,
+				CC39A06C5A9D88419CB5493F /* MenuTitle.swift in Sources */,
 				2BD33A5957007A36ED4FA664 /* Models.swift in Sources */,
 				BB9803278E2BE04A7010A99C /* NowPlayingService.swift in Sources */,
 				89198E567D1456C3C64C375D /* PresetStore.swift in Sources */,
