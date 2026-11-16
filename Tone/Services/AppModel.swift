@@ -19,7 +19,6 @@ final class AppModel {
     let presets = PresetStore()
     let store = SettingsStore()
     let permission = CapturePermission()
-    let battery = BluetoothBattery()
     let bluetooth = BluetoothAudio()
     @ObservationIgnored let engine = AudioEngine()
 
@@ -29,6 +28,7 @@ final class AppModel {
     var eqTarget: String?
     var dragging: String?
     var isPanelOpen = false
+    var expandedDevice: String?
 
     /// Apps that produced audio at least once since they launched.
     @ObservationIgnored private var everPlayed = Set<String>()

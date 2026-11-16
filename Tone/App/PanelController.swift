@@ -123,7 +123,7 @@ final class PanelController: NSObject {
             MainActor.assumeIsolated { KeyboardMode.shared.active = event.type == .keyDown }
             return event
         }
-        model.battery.refreshIfStale()
+        if model.openSections.contains(.output) { model.bluetooth.refresh() }
         clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
             MainActor.assumeIsolated { self?.close() }
         }
