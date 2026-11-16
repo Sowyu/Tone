@@ -36,9 +36,7 @@ final class NowPlayingService {
     private(set) var availability: Availability = .starting
 
     @ObservationIgnored private var process: Process?
-    @ObservationIgnored private var buffer = Data()
     @ObservationIgnored private var restarts = 0
-    @ObservationIgnored private var artworkCache: (key: String, image: NSImage?)?
 
     static let toolPaths = ["/opt/homebrew/bin/media-control", "/usr/local/bin/media-control"]
     var toolPath: String? { Self.toolPaths.first { FileManager.default.isExecutableFile(atPath: $0) } }
@@ -55,9 +53,13 @@ final class NowPlayingService {
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
+        // JSON parsing and artwork decoding stay on the pipe's background queue;
+        // the main thread only receives small parsed updates.
+        let decoder = NowPlayingDecoder()
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            let data = handle.availableData
-            DispatchQueue.main.async { MainActor.assumeIsolated { self?.consume(data) } }
+            let updates = decoder.feed(handle.availableData)
+            guard !updates.isEmpty else { return }
+            DispatchQueue.main.async { MainActor.assumeIsolated { updates.forEach { self?.apply($0) } } }
         }
         process.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.handleExit() } }
@@ -88,44 +90,17 @@ final class NowPlayingService {
         }
     }
 
-    private func consume(_ data: Data) {
-        guard !data.isEmpty else { return }
-        buffer.append(data)
-        while let newline = buffer.firstIndex(of: 0x0A) {
-            let line = buffer[buffer.startIndex..<newline]
-            buffer.removeSubrange(buffer.startIndex...newline)
-            handle(line: Data(line))
-        }
-    }
-
-    private func handle(line: Data) {
-        guard let json = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { return }
+    private func apply(_ update: NowPlayingUpdate) {
         availability = .available
         restarts = 0
-        let payload = json["payload"] as? [String: Any] ?? [:]
-        guard let bundle = (payload["parentApplicationBundleIdentifier"] as? String) ?? (payload["bundleIdentifier"] as? String),
-              let title = payload["title"] as? String else {
+        guard let bundle = update.bundle else {
             // Empty payload: nothing is playing any more.
             sessions = sessions.map { var s = $0; s.isPlaying = false; s.isCurrent = false; return s }
             pruneQuitApps()
             return
         }
-        let artworkBase64 = payload["artworkData"] as? String
-        let artworkKey = "\(bundle)|\(title)|\(artworkBase64?.count ?? 0)"
-        let artwork: NSImage?
-        if let cached = artworkCache, cached.key == artworkKey {
-            artwork = cached.image
-        } else {
-            artwork = artworkBase64.flatMap { Data(base64Encoded: $0) }.flatMap(NSImage.init(data:))
-            artworkCache = (artworkKey, artwork)
-        }
-        let session = NowPlayingSession(
-            id: bundle, title: title,
-            artist: payload["artist"] as? String ?? "",
-            album: payload["album"] as? String ?? "",
-            artwork: artwork,
-            isPlaying: payload["playing"] as? Bool ?? false,
-            isCurrent: true)
+        let session = NowPlayingSession(id: bundle, title: update.title, artist: update.artist, album: update.album,
+                                        artwork: update.artwork, isPlaying: update.playing, isCurrent: true)
 
         var next = sessions.map { var s = $0; s.isCurrent = false; if s.id != bundle { s.isPlaying = false }; return s }
         if let i = next.firstIndex(where: { $0.id == bundle }) {
@@ -158,5 +133,49 @@ final class NowPlayingService {
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try? process.run()
+    }
+}
+
+struct NowPlayingUpdate: @unchecked Sendable {
+    var bundle: String?
+    var title = "", artist = "", album = ""
+    var artwork: NSImage?
+    var playing = false
+}
+
+/// Splits the media-control stream into lines and decodes them. Used only from
+/// the pipe's readability queue, which delivers serially.
+final class NowPlayingDecoder: @unchecked Sendable {
+    private var buffer = Data()
+    private var artworkKey = ""
+    private var artwork: NSImage?
+
+    func feed(_ data: Data) -> [NowPlayingUpdate] {
+        guard !data.isEmpty else { return [] }
+        buffer.append(data)
+        var updates: [NowPlayingUpdate] = []
+        while let newline = buffer.firstIndex(of: 0x0A) {
+            let line = Data(buffer[buffer.startIndex..<newline])
+            buffer.removeSubrange(buffer.startIndex...newline)
+            if let update = decode(line) { updates.append(update) }
+        }
+        return updates
+    }
+
+    private func decode(_ line: Data) -> NowPlayingUpdate? {
+        guard let json = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { return nil }
+        let payload = json["payload"] as? [String: Any] ?? [:]
+        guard let bundle = (payload["parentApplicationBundleIdentifier"] as? String) ?? (payload["bundleIdentifier"] as? String),
+              let title = payload["title"] as? String else { return NowPlayingUpdate() }
+        let base64 = payload["artworkData"] as? String
+        let key = "\(bundle)|\(title)|\(base64?.count ?? 0)"
+        if key != artworkKey {
+            artworkKey = key
+            artwork = base64.flatMap { Data(base64Encoded: $0) }.flatMap(NSImage.init(data:))
+        }
+        return NowPlayingUpdate(bundle: bundle, title: title,
+                                artist: payload["artist"] as? String ?? "",
+                                album: payload["album"] as? String ?? "",
+                                artwork: artwork, playing: payload["playing"] as? Bool ?? false)
     }
 }

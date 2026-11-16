@@ -24,6 +24,14 @@ final class AudioEngine {
     /// Set when taps run but deliver only silence while the app is playing, which
     /// is what happens when audio capture permission was denied.
     var onSuspectedPermissionDenial: (() -> Void)?
+    /// Called when a timed decision is due: a neutral tap's release or a new tap's health check.
+    var onNeedsSync: (() -> Void)?
+
+    private func syncLater(_ delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            MainActor.assumeIsolated { self?.onNeedsSync?() }
+        }
+    }
 
     var tappedKeys: Set<String> { Set(taps.keys) }
 
@@ -66,6 +74,7 @@ final class AudioEngine {
                 if request.isNeutral {
                     // Keep a neutral tap for a few seconds so dragging through 100% doesn't rebuild it.
                     let since = neutralSince[key] ?? now
+                    if neutralSince[key] == nil { syncLater(4.1) }
                     neutralSince[key] = since
                     if now.timeIntervalSince(since) > 4 {
                         tap.invalidate()
@@ -95,6 +104,7 @@ final class AudioEngine {
                     taps[key] = try AppTap(key: key, processes: request.app.processObjects, outputUID: outputUID,
                                            gain: request.gain, eq: request.eq)
                     Self.log.info("Tapped \(key, privacy: .public)")
+                    syncLater(3.5)
                 } catch {
                     record(error, key)
                 }

@@ -2,7 +2,7 @@ import Foundation
 
 struct EQSettings: Codable, Equatable, Sendable {
     static let frequencies: [Double] = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
-    static let labels = ["32", "64", "125", "250", "500", "1K", "2K", "4K", "8K", "16K"]
+    static let labels = ["32", "64", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"]
     static let range: ClosedRange<Double> = -12...12
     static let qRange: ClosedRange<Double> = 0.3...4
 
@@ -51,3 +51,38 @@ enum PopoverSection: String, CaseIterable, Identifiable, Codable {
     case output = "Output", input = "Input", nowPlaying = "Now Playing", applications = "Applications"
     var id: String { rawValue }
 }
+
+/// Magnitude response of the same biquads the DSP runs, for drawing the EQ curve.
+enum EQResponse {
+    static let sampleRate = 48_000.0
+
+    static func decibels(_ eq: EQSettings, frequencies: [Double]) -> [Double] {
+        let c = DSPKernel.coefficients(for: eq, sampleRate: sampleRate)
+        return frequencies.map { f in
+            let w = 2 * Double.pi * f / sampleRate
+            let (c1, s1, c2, s2) = (cos(w), sin(w), cos(2 * w), sin(2 * w))
+            var total = 0.0
+            for band in 0..<DSPKernel.bandCount {
+                let b0 = c[band * 5], b1 = c[band * 5 + 1], b2 = c[band * 5 + 2]
+                let a1 = c[band * 5 + 3], a2 = c[band * 5 + 4]
+                let nr = b0 + b1 * c1 + b2 * c2, ni = b1 * s1 + b2 * s2
+                let dr = 1 + a1 * c1 + a2 * c2, di = a1 * s1 + a2 * s2
+                total += 10 * log10(max((nr * nr + ni * ni) / max(dr * dr + di * di, 1e-12), 1e-12))
+            }
+            return total
+        }
+    }
+}
+
+#if DEBUG
+extension EQResponse {
+    /// Runs at launch in Debug builds: the drawn curve must match the DSP's filters.
+    static func selfCheck() {
+        var eq = EQSettings.flat
+        assert(decibels(eq, frequencies: [1000]).first.map { abs($0) < 0.001 } == true, "flat EQ must be 0 dB")
+        eq.bands[5] = 6
+        let peak = decibels(eq, frequencies: [1000])[0]
+        assert(abs(peak - 6) < 0.05, "a +6 dB band must read +6 dB at its centre, got \(peak)")
+    }
+}
+#endif

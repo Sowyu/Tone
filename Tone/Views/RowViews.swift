@@ -9,13 +9,14 @@ struct ApplicationList: View {
     var body: some View {
         let rows = model.applicationRows
         VStack(spacing: 0) {
-            if model.permission.status == .denied { PermissionBanner() }
+            if model.permission.status == .denied { PermissionNotice() }
             if rows.isEmpty { EmptyHint(text: "No apps are playing audio") }
             ForEach(rows) { row in
                 AppRow(item: row)
                     .onDrop(of: [.text], delegate: ReorderDelegate(target: row.id, model: model) { model.moveApp($0, to: $1) })
             }
         }
+        .padding(.bottom, 4)
     }
 }
 
@@ -26,15 +27,13 @@ struct NowPlayingList: View {
         let rows = model.nowPlayingRows
         VStack(spacing: 0) {
             switch model.nowPlaying.availability {
-            case .missingTool:
-                EmptyHint(text: "Install media-control to see what's playing:\nbrew install media-control")
-                    .textSelection(.enabled)
-            case .failed(let reason):
-                EmptyHint(text: "Now Playing is unavailable (\(reason)).")
-            case .starting, .available:
-                if rows.isEmpty { EmptyHint(text: "Nothing is playing") }
+            case .missingTool: EmptyHint(text: "Install media-control to see what's playing.")
+            case .failed: EmptyHint(text: "Now Playing isn't available.")
+            case .starting, .available: if rows.isEmpty { EmptyHint(text: "Not Playing") }
             }
-            ForEach(rows) { session in
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, session in
+                // Full-width separators between rows, none under an expanded row.
+                if index > 0, model.expandedRow != "np:\(rows[index - 1].id)" { Divider() }
                 NowPlayingRow(session: session)
                     .onDrop(of: [.text], delegate: ReorderDelegate(target: session.id, model: model) { model.moveNowPlaying($0, to: $1) })
             }
@@ -42,24 +41,19 @@ struct NowPlayingList: View {
     }
 }
 
-struct PermissionBanner: View {
+struct PermissionNotice: View {
     @Environment(AppModel.self) private var model
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Tone needs System Audio Recording access to change app volumes.")
-                    .font(.system(size: 12))
-                    .fixedSize(horizontal: false, vertical: true)
-                Button("Open Privacy Settings") { model.permission.openSystemSettings() }
-                    .buttonStyle(.link)
-                    .font(.system(size: 12))
-            }
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Tone needs permission to record system audio to change app volumes.")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Open Privacy & Security Settings…") { model.permission.openSystemSettings() }
+                .buttonStyle(.link)
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(.yellow.opacity(0.12)))
-        .padding(.horizontal, 4)
-        .padding(.bottom, 4)
+        .font(.system(size: 12))
+        .padding(.horizontal, Metrics.inset)
+        .padding(.bottom, 8)
     }
 }
 
@@ -84,62 +78,90 @@ struct ReorderDelegate: DropDelegate {
 
 // MARK: Rows
 
-struct AppRow: View {
+/// Shared row behaviour: click or Return expands the controls band, drag
+/// reorders, right-click opens the native context menu.
+private struct ExpandableRow<Header: View>: View {
     @Environment(AppModel.self) private var model
-    let item: AppRowItem
+    let key: String
+    let rowID: String
+    let movable: Bool
+    var highlightInset = true
+    @ViewBuilder let header: Header
     @FocusState private var focused: Bool
 
-    private var rowID: String { "app:\(item.id)" }
     private var expanded: Bool { model.expandedRow == rowID }
 
     var body: some View {
-        let settings = model.settings(item.id)
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(nsImage: model.icon(item.id))
-                    .resizable()
-                    .frame(width: 22, height: 22)
-                    .opacity(item.isRunning ? 1 : 0.5)
-                Text(item.name).lineLimit(1)
-                Spacer(minLength: 4)
-                if settings.eqEnabled {
-                    Image(systemName: "slider.vertical.3")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
+            header
+                .padding(.horizontal, Metrics.inset)
+                .modifier(RowBackground(inset: highlightInset, focused: focused))
+                .onTapGesture(perform: toggle)
+                .focusRow($focused, action: toggle)
+                .onDrag {
+                    model.dragging = key
+                    return NSItemProvider(object: key as NSString)
                 }
-                Text("\(Int((settings.volume * 100).rounded()))%")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .rowHighlight(active: expanded, focused: focused)
-            .onTapGesture(perform: toggle)
-            .focusRow($focused, action: toggle)
-            .onDrag {
-                model.dragging = item.id
-                return NSItemProvider(object: item.id as NSString)
-            }
-            .contextMenu { RowContextMenu(key: item.id, canMove: true) }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityHint("Shows volume and equalizer for \(item.name)")
+                .contextMenu { RowContextMenu(key: key, movable: movable) }
+                .accessibilityAddTraits(.isButton)
+                .accessibilityValue(expanded ? "expanded" : "collapsed")
 
             if expanded {
-                AppControlPanel(key: item.id)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 4)
+                AppControls(key: key)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .opacity(model.dragging == item.id ? 0.55 : 1)
+        .opacity(model.dragging == key ? 0.5 : 1)
     }
 
     private func toggle() {
         model.dragging = nil
         Motion.animate {
             model.expandedRow = expanded ? nil : rowID
-            if !expanded, model.eqTarget != nil, model.eqTarget != item.id { model.eqTarget = nil }
+            model.eqTarget = nil
+        }
+    }
+}
+
+/// Inset rounded highlight for compact rows, full-width tint for tall ones.
+private struct RowBackground: ViewModifier {
+    let inset: Bool
+    let focused: Bool
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        if inset {
+            content.hoverHighlight(focused: focused)
+        } else {
+            content
+                .contentShape(Rectangle())
+                .background(Color.primary.opacity(hovering || focused ? 0.05 : 0))
+                .onHover { hovering = $0 }
+        }
+    }
+}
+
+struct AppRow: View {
+    @Environment(AppModel.self) private var model
+    let item: AppRowItem
+
+    var body: some View {
+        let volume = model.settings(item.id).volume
+        ExpandableRow(key: item.id, rowID: "app:\(item.id)", movable: true) {
+            HStack(spacing: 8) {
+                Image(nsImage: model.icon(item.id))
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: Metrics.appIcon, height: Metrics.appIcon)
+                    .opacity(item.isRunning ? 1 : 0.5)
+                Text(item.name).lineLimit(1)
+                Spacer(minLength: 4)
+                Text(volume.percent)
+                    .monospacedDigit()
+                    .foregroundStyle(volume > 1.0001 ? AnyShapeStyle(Color.orange) : AnyShapeStyle(.secondary))
+            }
+            .frame(height: 28)
+            .accessibilityElement(children: .combine)
         }
     }
 }
@@ -147,84 +169,51 @@ struct AppRow: View {
 struct NowPlayingRow: View {
     @Environment(AppModel.self) private var model
     let session: NowPlayingSession
-    @FocusState private var focused: Bool
-
-    private var rowID: String { "np:\(session.id)" }
-    private var expanded: Bool { model.expandedRow == rowID }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 10) {
+        ExpandableRow(key: session.id, rowID: "np:\(session.id)", movable: false, highlightInset: false) {
+            HStack(spacing: 14) {
                 Artwork(image: session.artwork, badge: model.icon(session.id))
                 VStack(alignment: .leading, spacing: 1) {
-                    MarqueeText(text: session.title, font: .system(size: 13, weight: .bold))
+                    MarqueeText(text: session.title, font: .system(size: 13, weight: .semibold))
                     if !session.subtitle.isEmpty {
-                        Text(session.subtitle)
-                            .font(.system(size: 11))
+                        MarqueeText(text: session.subtitle, font: .system(size: 13))
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
                     }
                 }
-                Spacer(minLength: 4)
-                HStack(spacing: 2) {
-                    MediaButton(symbol: session.isPlaying ? "pause.fill" : "play.fill",
+                HStack(spacing: 10) {
+                    MediaButton(symbol: session.isPlaying ? "pause.fill" : "play.fill", size: 21,
                                 label: session.isPlaying ? "Pause" : "Play") { model.nowPlaying.togglePlayPause(session) }
-                    MediaButton(symbol: "forward.fill", label: "Next track") { model.nowPlaying.next(session) }
+                    MediaButton(symbol: "forward.fill", size: 17, label: "Next Track") { model.nowPlaying.next(session) }
                 }
+                .foregroundStyle(session.isCurrent && session.isPlaying ? .primary : .secondary)
                 .disabled(!session.isCurrent)
-                .help(session.isCurrent ? "" : "Only the active player can be controlled")
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .rowHighlight(active: expanded, focused: focused)
-            .onTapGesture(perform: toggle)
-            .focusRow($focused, action: toggle)
-            .onDrag {
-                model.dragging = session.id
-                return NSItemProvider(object: session.id as NSString)
-            }
-            .contextMenu { RowContextMenu(key: session.id, canMove: false) }
-
-            if expanded {
-                AppControlPanel(key: session.id)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 4)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .opacity(model.dragging == session.id ? 0.55 : 1)
-    }
-
-    private func toggle() {
-        model.dragging = nil
-        Motion.animate {
-            model.expandedRow = expanded ? nil : rowID
-            if !expanded, model.eqTarget != nil, model.eqTarget != session.id { model.eqTarget = nil }
+            .frame(height: 65)
         }
     }
 }
 
 private struct MediaButton: View {
     let symbol: String
+    let size: CGFloat
     let label: String
     let action: () -> Void
-    @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 13))
-                .frame(width: 26, height: 26)
-                .background(Circle().fill(.white.opacity(hovering ? 0.12 : 0)))
+                .font(.system(size: size))
+                .frame(width: 26, height: 30)
+                .contentShape(Rectangle())
                 .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
         .accessibilityLabel(label)
     }
 }
 
-/// Rounded-square artwork with the source app's icon as a round badge.
+/// Rounded-square artwork with the source app's icon as a badge on the corner.
 struct Artwork: View {
     let image: NSImage?
     let badge: NSImage
@@ -233,26 +222,24 @@ struct Artwork: View {
         ZStack(alignment: .bottomTrailing) {
             Group {
                 if let image {
-                    Image(nsImage: image).resizable().aspectRatio(contentMode: .fill)
+                    Image(nsImage: image).resizable().interpolation(.high).aspectRatio(contentMode: .fill)
                 } else {
-                    ZStack {
-                        Color.white.opacity(0.1)
-                        Image(systemName: "music.note").foregroundStyle(.secondary)
-                    }
+                    Image(systemName: "music.note")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.quaternary)
                 }
             }
-            .frame(width: 38, height: 38)
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .frame(width: Metrics.artwork, height: Metrics.artwork)
+            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
 
             Image(nsImage: badge)
                 .resizable()
-                .frame(width: 16, height: 16)
-                .background(Circle().fill(.black.opacity(0.55)).padding(-1.5))
-                .clipShape(Circle())
-                .offset(x: 4, y: 4)
+                .interpolation(.high)
+                .frame(width: 18, height: 18)
+                .shadow(color: .black.opacity(0.3), radius: 1, y: 0.5)
+                .offset(x: 3, y: 3)
         }
-        .padding(.trailing, 4)
-        .padding(.bottom, 4)
         .accessibilityHidden(true)
     }
 }
@@ -260,14 +247,14 @@ struct Artwork: View {
 struct RowContextMenu: View {
     @Environment(AppModel.self) private var model
     let key: String
-    let canMove: Bool
+    let movable: Bool
 
     var body: some View {
         Toggle("Always Show", isOn: Binding(get: { model.store.state.pinned.contains(key) },
                                             set: { _ in model.togglePinned(key) }))
         Button("Reset Volume") { model.resetVolume(key) }
         Button("Hide") { Motion.animate { model.hide(key) } }
-        if canMove {
+        if movable {
             Divider()
             Button("Move Up") { Motion.animate { model.moveApp(key, by: -1) } }
             Button("Move Down") { Motion.animate { model.moveApp(key, by: 1) } }
@@ -275,128 +262,133 @@ struct RowContextMenu: View {
     }
 }
 
-// MARK: Inline control panel
+// MARK: Controls band
 
-struct AppControlPanel: View {
+/// The lighter full-width band under an expanded row: Volume, Equalizer, Preset.
+struct AppControls: View {
     @Environment(AppModel.self) private var model
     let key: String
-    @FocusState private var eqFocused: Bool
 
     var body: some View {
         let s = model.settings(key)
         let volume = Binding(get: { model.settings(key).volume }, set: { model.setVolume(key, $0) })
-        let eqOn = Binding(get: { model.settings(key).eqEnabled }, set: { on in
-            model.setEQEnabled(key, on)
-            if on { Motion.animate { model.eqTarget = key } }
+        let eqOn = Binding(get: { model.settings(key).eqEnabled }, set: { model.setEQEnabled(key, $0) })
+        let eqShown = Binding(get: { model.eqTarget == key }, set: { shown in
+            if !shown, model.eqTarget == key { model.eqTarget = nil }
         })
-        VStack(spacing: 6) {
-            if model.permission.status == .denied { PermissionBanner() }
-            HStack(spacing: 8) {
-                Image(systemName: SpeakerSymbol.name(volume: min(s.volume, 1), muted: false))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 16, alignment: .leading)
-                ToneSlider(value: volume, range: 0...model.overdriveLimit, mark: model.overdriveLimit > 1 ? 1 : nil,
-                           accessibilityLabel: "\(model.displayName(key)) volume",
-                           accessibilityValue: "\(Int((s.volume * 100).rounded())) percent")
-                Text("\(Int((s.volume * 100).rounded()))%")
-                    .monospacedDigit()
-                    .foregroundStyle(s.volume > 1.001 ? Color.orange : .secondary)
-                    .frame(width: 40, alignment: .trailing)
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            if model.permission.status == .denied { PermissionNotice().padding(.top, 10) }
 
+            HStack(alignment: .firstTextBaseline) {
+                Text("Volume").fontWeight(.semibold)
+                Spacer()
+                Text(s.volume.percent)
+                    .monospacedDigit()
+                    .foregroundStyle(s.volume > 1.0001 ? AnyShapeStyle(Color.orange) : AnyShapeStyle(.secondary))
+            }
+            .padding(.horizontal, Metrics.inset)
+            .padding(.top, 13)
+
+            SpeakerSlider(value: volume, range: 0...model.overdriveLimit, tint: Color(nsColor: .labelColor).opacity(0.85),
+                          label: "\(model.displayName(key)) volume")
+                .padding(.horizontal, Metrics.inset)
+                .padding(.top, 8)
+                .padding(.bottom, 11)
+
+            InsetDivider(inset: 4)
             HStack {
-                Button(action: toggleEQPanel) {
-                    HStack(spacing: 4) {
-                        Text("Equalizer")
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .opacity(model.eqTarget == key ? 1 : 0.6)
-                    }
-                    .padding(.vertical, 3)
-                    .padding(.horizontal, 4)
-                    .rowHighlight(active: model.eqTarget == key, focused: eqFocused)
+                Text("Equalizer")
+                Spacer()
+                Toggle("Equalizer", isOn: eqOn).toggleStyle(.switch).labelsHidden()
+            }
+            .padding(.horizontal, Metrics.inset)
+            .frame(height: 37)
+
+            InsetDivider(inset: 4)
+            HStack(spacing: 8) {
+                Text("Preset")
+                Button {
+                    Motion.animate { model.eqTarget = model.eqTarget == key ? nil : key }
+                } label: {
+                    Image(systemName: "chart.xyaxis.line")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .focusRow($eqFocused, action: toggleEQPanel)
-                .accessibilityHint("Opens the equalizer panel")
-                Spacer()
-                Toggle("Equalizer", isOn: eqOn)
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .labelsHidden()
-            }
-
-            HStack {
-                Text("Preset").padding(.leading, 4)
+                .help("Equalizer")
+                .accessibilityLabel("Show Equalizer")
                 Spacer()
                 PresetMenu(key: key)
             }
+            .padding(.horizontal, Metrics.inset)
+            .frame(height: 37)
+            // Anchored to the full-width row so the arrow lands on the panel's left edge.
+            .popover(isPresented: eqShown, arrowEdge: .leading) {
+                EQPanel(key: key).environment(model)
+            }
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.white.opacity(0.06)))
-    }
-
-    private func toggleEQPanel() {
-        Motion.animate { model.eqTarget = model.eqTarget == key ? nil : key }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.07))
     }
 }
 
 struct PresetMenu: View {
     @Environment(AppModel.self) private var model
     let key: String
+    @State private var naming = false
+    @State private var newName = ""
 
     var body: some View {
         let current = model.settings(key).presetName
         Menu {
-            ForEach(PresetStore.builtIn) { preset in item(preset, current: current) }
+            ForEach(PresetStore.builtIn) { item($0, current: current) }
             if !model.presets.custom.isEmpty {
                 Divider()
-                Menu("Custom Presets") {
-                    ForEach(model.presets.custom) { preset in item(preset, current: current) }
-                }
+                ForEach(model.presets.custom) { item($0, current: current) }
             }
             Divider()
             Button("Save as Preset…", action: saveAsPreset)
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 8) {
                 Text(current)
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold))
+                    .contentTransition(.opacity)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 22, height: 22)
+                    .background(Circle().fill(.quaternary))
             }
-            .foregroundStyle(.secondary)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .accessibilityLabel("Preset, \(current)")
+        .accessibilityLabel("Preset")
+        .accessibilityValue(current)
     }
 
     @ViewBuilder private func item(_ preset: EQPreset, current: String) -> some View {
-        Button {
+        Toggle(preset.name, isOn: Binding(get: { preset.name == current }, set: { _ in
             Motion.animate { model.applyPreset(key, preset) }
-        } label: {
-            if preset.name == current { Label(preset.name, systemImage: "checkmark") } else { Text(preset.name) }
-        }
+        }))
     }
 
     private func saveAsPreset() {
         let alert = NSAlert()
         alert.messageText = "Save as Preset"
-        alert.informativeText = "Name this equalizer setting."
-        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
-        field.placeholderString = "My Preset"
+        alert.informativeText = "Enter a name for this equalizer setting."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 22))
+        field.placeholderString = "Preset Name"
         alert.accessoryView = field
         alert.addButton(withTitle: "Save")
         alert.addButton(withTitle: "Cancel")
         alert.window.initialFirstResponder = field
         NSApp.activate()
         guard alert.runModal() == .alertFirstButtonReturn else { return }
-        let eq = model.settings(key).eq
-        let name = field.stringValue
-        if model.presets.save(name: name, eq: eq) {
-            model.store.update(key) { $0.presetName = name.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let name = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if model.presets.save(name: name, eq: model.settings(key).eq) {
+            model.store.update(key) { $0.presetName = name }
         } else {
             NSSound.beep()
         }
@@ -405,7 +397,9 @@ struct PresetMenu: View {
 
 // MARK: Marquee
 
-/// Single-line text that scrolls smoothly when it doesn't fit. Static under Reduce Motion.
+/// Single-line text that scrolls continuously when it doesn't fit, with the
+/// next copy following 32pt behind. Static under Reduce Motion. Only rendered
+/// while the panel is open, so the animation stops when it closes.
 struct MarqueeText: View {
     let text: String
     let font: Font
@@ -428,23 +422,16 @@ struct MarqueeText: View {
                         Text(text).font(font).fixedSize()
                     }
                     .offset(x: scrolling ? -(textWidth + gap) : 0)
-                    .animation(.linear(duration: Double((textWidth + gap) / speed)).delay(1.5).repeatForever(autoreverses: false),
+                    .animation(.linear(duration: Double((textWidth + gap) / speed)).delay(1).repeatForever(autoreverses: false),
                                value: scrolling)
                     .onAppear { scrolling = true }
-                    .onDisappear { scrolling = false }
                 } else {
-                    Text(text).font(font).lineLimit(1).truncationMode(.tail)
+                    Text(text).font(font).lineLimit(1)
                 }
             }
             .background(
                 Text(text).font(font).fixedSize().hidden()
                     .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { textWidth = $0 }
-            )
-            .mask(
-                LinearGradient(stops: overflows ? [.init(color: .clear, location: 0), .init(color: .black, location: 0.04),
-                                                   .init(color: .black, location: 0.92), .init(color: .clear, location: 1)]
-                                                : [.init(color: .black, location: 0), .init(color: .black, location: 1)],
-                               startPoint: .leading, endPoint: .trailing)
             )
             .clipped()
             .id(text)

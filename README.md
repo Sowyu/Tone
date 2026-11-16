@@ -8,6 +8,10 @@ Tone is a native Swift 6 and SwiftUI app. It installs no audio driver, HAL plug-
 
 The design is Jace's sound mixer concept (JaceThings on X): https://x.com/JaceThings/status/2105247096916099505. Tone is an independent implementation of that concept and is not affiliated with Jace.
 
+## Design
+
+The UI follows the concept video frame by frame and uses system parts wherever the video does. The panel is Liquid Glass with semantic colors. Every slider is a native `Slider`, so the knob turns into a glass lens while you drag it. The EQ is a real `NSPopover` whose arrow points at the Preset row. Its curve is the actual magnitude response of the biquads the DSP runs, so Width (Q) changes the shape between the points. Section, row and preset changes all animate with one 0.32 s spring, which falls back to a short fade under Reduce Motion. On macOS 15 the panel uses the menu material instead of glass.
+
 ## Requirements
 
 - macOS 15 or later. Developed and tested on macOS 27.

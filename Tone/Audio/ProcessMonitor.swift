@@ -34,9 +34,12 @@ final class ProcessMonitor {
             self?.scheduleRefresh()
         }
         refresh()
-        // Helpers launched by NSWorkspace apps sometimes resolve late; a slow poll catches it.
-        Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refresh() }
+        // App launches and quits change how helpers resolve to their app.
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.scheduleRefresh() }
+            }
         }
     }
 

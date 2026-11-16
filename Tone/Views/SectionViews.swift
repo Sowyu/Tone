@@ -12,16 +12,18 @@ struct AccordionSection: View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: toggle) {
                 HStack {
-                    Text(section.rawValue).fontWeight(.semibold)
+                    Text(section.rawValue)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.secondary)
                         .rotationEffect(.degrees(isOpen ? 90 : 0))
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 7)
-                .rowHighlight(focused: focused)
+                .padding(.horizontal, Metrics.inset)
+                .frame(height: Metrics.sectionRowHeight)
+                .hoverHighlight(focused: focused)
             }
             .buttonStyle(.plain)
             .focusRow($focused, action: toggle)
@@ -29,9 +31,7 @@ struct AccordionSection: View {
             .accessibilityValue(isOpen ? "expanded" : "collapsed")
 
             if isOpen {
-                content
-                    .padding(.bottom, 4)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                content.transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .clipped()
@@ -68,16 +68,16 @@ struct DeviceList: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if devices.isEmpty {
-                EmptyHint(text: "No devices")
-            }
+            if devices.isEmpty { EmptyHint(text: "No devices") }
             ForEach(devices) { device in
                 DeviceRow(device: device, isSelected: device.id == selected) { choose(device) }
             }
         }
+        .padding(.bottom, 4)
     }
 }
 
+/// Same shape as the device rows in the system Sound menu.
 private struct DeviceRow: View {
     let device: AudioDevice
     let isSelected: Bool
@@ -87,20 +87,17 @@ private struct DeviceRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.blue)
-                    .opacity(isSelected ? 1 : 0)
-                    .frame(width: 14)
-                Text(device.name).lineLimit(1)
-                Spacer()
                 Image(systemName: device.symbol)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                    .frame(width: 24, height: 24)
+                    .background(Circle().fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary)))
+                Text(device.name).lineLimit(1)
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .rowHighlight(focused: focused)
+            .padding(.horizontal, Metrics.inset)
+            .frame(height: 30)
+            .hoverHighlight(focused: focused)
         }
         .buttonStyle(.plain)
         .focusRow($focused, action: action)
@@ -112,10 +109,9 @@ struct EmptyHint: View {
     let text: String
     var body: some View {
         Text(text)
-            .font(.system(size: 12))
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, Metrics.inset)
+            .padding(.bottom, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

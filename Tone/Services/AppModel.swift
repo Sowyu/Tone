@@ -31,7 +31,7 @@ final class AppModel {
     /// Apps that produced audio at least once since they launched.
     @ObservationIgnored private var everPlayed = Set<String>()
     @ObservationIgnored private var icons: [String: NSImage] = [:]
-    @ObservationIgnored private var timer: Timer?
+    @ObservationIgnored private var observers: [NSObjectProtocol] = []
 
     init() {
         openSections = Set(store.state.openSections)
@@ -41,20 +41,25 @@ final class AppModel {
         engine.setOutputDevice(uid: devices.defaultOutput?.uid)
         nowPlaying.start()
         syncEngine()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
-        }
+        // Event driven: no polling timers. The engine asks for a re-sync when a
+        // neutral tap is due for release or a new tap needs its health check.
+        engine.onNeedsSync = { [weak self] in self?.healthCheck() }
+        observers.append(NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.nowPlaying.pruneQuitApps() }
+        })
         Diagnostics.shared.attach(self)
+        #if DEBUG
+        EQResponse.selfCheck()
+        #endif
     }
 
-    private func tick() {
+    private func healthCheck() {
         syncEngine()
-        if permission.status != .authorized {
-            permission.refresh()
-            let playing = Set(processes.apps.values.filter(\.isPlaying).map(\.id))
-            engine.checkForSilentTaps(playing: playing, olderThan: 3)
-        }
-        nowPlaying.pruneQuitApps()
+        guard permission.status != .authorized else { return }
+        permission.refresh()
+        let playing = Set(processes.apps.values.filter(\.isPlaying).map(\.id))
+        engine.checkForSilentTaps(playing: playing, olderThan: 3)
     }
 
     private func outputDeviceChanged() {

@@ -11,14 +11,12 @@ final class TonePanel: NSPanel {
 
 /// Status item + the popover-style panel under it.
 ///
-/// The panel is one transparent window wide enough for the popover plus the EQ
-/// panel that slides out on its left. Transparent areas let clicks through, and
-/// a global mouse monitor closes the panel when you click anywhere else.
+/// The panel is a transparent window as tall as the screen so the glass surface
+/// inside can grow and shrink with a spring, like the system menu bar extras.
+/// Transparent areas let clicks through, and a global mouse monitor closes the
+/// panel when you click anywhere else. The EQ is a native popover off this panel.
 @MainActor
 final class PanelController: NSObject {
-    static let popoverWidth: CGFloat = 320
-    static let eqWidth: CGFloat = 290
-    static let gap: CGFloat = 8
     static let margin: CGFloat = 24
 
     private let model: AppModel
@@ -84,13 +82,16 @@ final class PanelController: NSObject {
 
     func toggleFromDebug() { toggle() }
 
-    /// Debug only: expand a row and optionally show its EQ panel, for screenshots.
-    func expandFromDebug(key: String, eq: Bool) {
+    /// Debug only: expand a row ("app:<key>" or "np:<key>") and optionally show its EQ.
+    func expandFromDebug(row: String, eq: Bool) {
         if !panel.isVisible { show() }
+        let key = String(row.drop(while: { $0 != ":" }).dropFirst())
         Motion.animate {
-            model.openSections.insert(.applications)
-            model.expandedRow = "app:\(key)"
-            model.eqTarget = eq ? key : nil
+            model.openSections.formUnion([.nowPlaying, .applications])
+            model.expandedRow = row
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            MainActor.assumeIsolated { self.model.eqTarget = eq ? key : nil }
         }
     }
 
@@ -99,15 +100,16 @@ final class PanelController: NSObject {
               let screen = buttonWindow.screen ?? NSScreen.main else { return }
         let rect = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
         let visible = screen.visibleFrame
-        let width = Self.margin + Self.eqWidth + Self.gap + Self.popoverWidth + Self.margin
+        let width = Self.margin + Metrics.width + Self.margin
         let top = min(rect.minY, visible.maxY) - 2
         let height = top - visible.minY
-        var popoverX = rect.midX - Self.popoverWidth / 2
-        popoverX = min(popoverX, visible.maxX - Self.popoverWidth - 6)
+        var popoverX = rect.midX - Metrics.width / 2
+        popoverX = min(popoverX, visible.maxX - Metrics.width - 6)
         popoverX = max(popoverX, visible.minX + 6)
-        let originX = popoverX - Self.eqWidth - Self.gap - Self.margin
+        let originX = popoverX - Self.margin
         panel.setFrame(NSRect(x: originX, y: top - height, width: width, height: height), display: true)
 
+        if model.permission.status != .authorized { model.permission.refresh() }
         model.isPanelOpen = true
         panel.orderFrontRegardless()
         panel.makeKey()

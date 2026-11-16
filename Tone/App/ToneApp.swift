@@ -30,9 +30,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 MainActor.assumeIsolated { self?.panel.toggleFromDebug() }
             }
             DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.expand"), object: nil, queue: .main) { [weak self] note in
-                let key = note.userInfo?["key"] as? String ?? ""
+                let row = note.userInfo?["row"] as? String ?? ""
                 let eq = (note.userInfo?["eq"] as? NSNumber)?.boolValue ?? false
-                MainActor.assumeIsolated { self?.panel.expandFromDebug(key: key, eq: eq) }
+                MainActor.assumeIsolated { self?.panel.expandFromDebug(row: row, eq: eq) }
             }
         }
     }
