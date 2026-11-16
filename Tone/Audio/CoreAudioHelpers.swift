@@ -81,6 +81,24 @@ enum CA {
     }
 }
 
+/// Runs work on the main thread in the common run loop modes, which include
+/// event tracking. GCD's main queue and default-mode timers wait while an
+/// NSMenu is open; this doesn't, so the open menu stays live.
+enum MainLoop {
+    nonisolated static func perform(_ body: @escaping @MainActor () -> Void) {
+        let box = SendableBox(body)
+        CFRunLoopPerformBlock(CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue) {
+            MainActor.assumeIsolated { box.value() }
+        }
+        CFRunLoopWakeUp(CFRunLoopGetMain())
+    }
+}
+
+struct SendableBox<T>: @unchecked Sendable {
+    let value: T
+    init(_ value: T) { self.value = value }
+}
+
 /// Owns one AudioObject property listener and removes it on `cancel()` or deinit.
 final class PropertyListener: @unchecked Sendable {
     private let object: AudioObjectID
@@ -88,18 +106,21 @@ final class PropertyListener: @unchecked Sendable {
     private let block: AudioObjectPropertyListenerBlock
     private var active = false
 
-    /// `handler` runs on the main queue.
+    private static let queue = DispatchQueue(label: "com.gooober.tone.listeners")
+
+    /// `handler` runs on the main thread, also while the menu is open.
     init(_ object: AudioObjectID, _ address: AudioObjectPropertyAddress, handler: @escaping @MainActor () -> Void) {
         self.object = object
         self.address = address
-        self.block = { _, _ in MainActor.assumeIsolated { handler() } }
-        active = AudioObjectAddPropertyListenerBlock(object, &self.address, .main, block) == noErr
+        let box = SendableBox(handler)
+        self.block = { _, _ in MainLoop.perform { box.value() } }
+        active = AudioObjectAddPropertyListenerBlock(object, &self.address, Self.queue, block) == noErr
     }
 
     func cancel() {
         guard active else { return }
         active = false
-        AudioObjectRemovePropertyListenerBlock(object, &address, .main, block)
+        AudioObjectRemovePropertyListenerBlock(object, &address, Self.queue, block)
     }
 
     deinit { cancel() }

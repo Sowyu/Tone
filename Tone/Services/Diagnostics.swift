@@ -41,9 +41,11 @@ final class Diagnostics {
                 self.handle(key: key, volume: volume, eq: eq, preset: preset, output: output)
             }
         }
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+        let timer = Timer(timeInterval: 1, repeats: true) { _ in
             MainActor.assumeIsolated { self.dump() }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
 
     private func handle(key: String?, volume: Double?, eq: Bool?, preset: String?, output: String?) {
@@ -67,6 +69,7 @@ final class Diagnostics {
             lines.append(String(format: "  tap %@ rate=%.0f callbacks=%llu peakIn=%.4f peakOut=%.4f ratio=%.3f overloads=%d",
                                 d.key, d.rate, d.callbacks, d.peakIn, d.peakOut, ratio, d.overloads))
         }
+        lines.append("  nowPlaying " + model.nowPlaying.sessions.map { "\($0.id) playing=\($0.isPlaying) current=\($0.isCurrent)" }.joined(separator: "; "))
         if let error = model.engine.lastError { lines.append("  lastError \(error)") }
         lines.forEach(write)
     }

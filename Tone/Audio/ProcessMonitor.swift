@@ -46,12 +46,14 @@ final class ProcessMonitor {
     private func scheduleRefresh() {
         guard !pending else { return }
         pending = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+        // Coalesce bursts of HAL notifications into one refresh.
+        let timer = Timer(timeInterval: 0.05, repeats: false) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.pending = false
                 self?.refresh()
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     func refresh() {

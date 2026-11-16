@@ -46,11 +46,19 @@ final class MenuController: NSObject, NSMenuDelegate {
         updateIcon()
     }
 
+    /// Closes the menu from code (debug hook).
+    func close() { menu.cancelTracking() }
+
     /// Opens the menu from code (debug hook and `--open`). With an auto-hidden
     /// menu bar the status button can't be clicked, so pop up under the top-right corner.
     func open() {
         guard let screen = NSScreen.main else { return }
         let frame = screen.visibleFrame
+        // Debug openings close themselves: notifications can't reach the app while a menu tracks.
+        let timer = Timer(timeInterval: 12, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated { self?.close() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
         menu.popUp(positioning: nil, at: NSPoint(x: frame.maxX - Metrics.menuWidth - 40, y: frame.maxY - 6), in: nil)
     }
 
@@ -245,7 +253,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         let rows = model.nowPlayingRows
         if rows.isEmpty { menu.addItem(ActionItem("Not Playing", enabled: false) {}) }
         for session in rows {
-            let item = viewItem { state in SessionRowView(state: state, session: session) }
+            let item = viewItem { state in SessionRowView(state: state, id: session.id) }
             item.submenu = appMenu(for: session.id, movable: false)
             menu.addItem(item)
         }
@@ -258,7 +266,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         let rows = model.applicationRows
         if rows.isEmpty { menu.addItem(ActionItem("No Apps Playing Audio", enabled: false) {}) }
         for row in rows {
-            let item = viewItem { state in AppRowView(state: state, item: row) }
+            let item = viewItem { state in AppRowView(state: state, initial: row) }
             item.submenu = appMenu(for: row.id, movable: true)
             menu.addItem(item)
         }

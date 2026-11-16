@@ -29,6 +29,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.panel"), object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.menu.open() }
             }
+            DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.close"), object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.menu.close() }
+            }
             DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.expand"), object: nil, queue: .main) { [weak self] note in
                 let row = note.userInfo?["row"] as? String ?? ""
                 let eq = (note.userInfo?["eq"] as? NSNumber)?.boolValue ?? false

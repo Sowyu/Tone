@@ -251,11 +251,19 @@ private struct ModeGlyph: View {
 struct SessionRowView: View {
     @Environment(AppModel.self) private var model
     let state: RowState
-    let session: NowPlayingSession
+    /// Source app bundle ID. The row reads the session live from the model so
+    /// play/pause, title and artwork update while the menu is open.
+    let id: String
 
     var body: some View {
+        if let session = model.nowPlaying.sessions.first(where: { $0.id == id }) {
+            row(session)
+        }
+    }
+
+    private func row(_ session: NowPlayingSession) -> some View {
         let on = state.highlighted
-        HStack(spacing: 10) {
+        return HStack(spacing: 10) {
             Artwork(image: session.artwork, badge: model.icon(session.id))
             VStack(alignment: .leading, spacing: 1) {
                 MarqueeText(text: session.title, font: .system(size: 13, weight: .semibold), animated: model.isMenuOpen)
@@ -302,9 +310,13 @@ private struct MediaButton: View {
 struct AppRowView: View {
     @Environment(AppModel.self) private var model
     let state: RowState
-    let item: AppRowItem
+    let initial: AppRowItem
+
+    /// Read live so running state and name update while the menu is open.
+    private var item: AppRowItem { model.applicationRows.first { $0.id == initial.id } ?? initial }
 
     var body: some View {
+        let item = self.item
         let on = state.highlighted
         let volume = model.settings(item.id).volume
         HStack(spacing: 8) {

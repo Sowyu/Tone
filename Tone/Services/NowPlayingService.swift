@@ -59,7 +59,8 @@ final class NowPlayingService {
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let updates = decoder.feed(handle.availableData)
             guard !updates.isEmpty else { return }
-            DispatchQueue.main.async { MainActor.assumeIsolated { updates.forEach { self?.apply($0) } } }
+            // .common includes event tracking, so updates land while the menu is open.
+            MainLoop.perform { updates.forEach { self?.apply($0) } }
         }
         process.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.handleExit() } }
@@ -162,6 +163,12 @@ final class NowPlayingDecoder: @unchecked Sendable {
         return updates
     }
 
+    /// `playing` is the documented flag; some players only update `playbackRate`.
+    static func isPlaying(_ payload: [String: Any]) -> Bool {
+        if let rate = payload["playbackRate"] as? Double, rate == 0 { return false }
+        return payload["playing"] as? Bool ?? false
+    }
+
     private func decode(_ line: Data) -> NowPlayingUpdate? {
         guard let json = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { return nil }
         let payload = json["payload"] as? [String: Any] ?? [:]
@@ -176,6 +183,6 @@ final class NowPlayingDecoder: @unchecked Sendable {
         return NowPlayingUpdate(bundle: bundle, title: title,
                                 artist: payload["artist"] as? String ?? "",
                                 album: payload["album"] as? String ?? "",
-                                artwork: artwork, playing: payload["playing"] as? Bool ?? false)
+                                artwork: artwork, playing: Self.isPlaying(payload))
     }
 }
