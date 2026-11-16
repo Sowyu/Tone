@@ -76,17 +76,15 @@ final class PresetStore {
     private func persist() { Storage.save(custom, to: "presets.json") }
 }
 
-/// Per-app settings, pins, hidden apps, row order and app preferences.
+/// Per-app settings, pins, hidden apps, app order and preferences.
 struct PersistedState: Codable {
     var apps: [String: AppAudioSettings] = [:]
     var pinned: [String] = []
     var hidden: [String] = []
     var appOrder: [String] = []
-    var nowPlayingOrder: [String] = []
     var names: [String: String] = [:]
     var overdriveLimit: Double = 2
     var iconStyle: MenuBarIconStyle = .speaker
-    var openSections: [PopoverSection] = [.applications]
 }
 
 @MainActor @Observable

@@ -1,20 +1,10 @@
-import AppKit
-import SwiftUI
+import Foundation
 
-enum Motion {
-    static var reduce: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
-    static var spring: Animation { reduce ? .easeInOut(duration: 0.15) : .spring(response: 0.32, dampingFraction: 0.86) }
-    static func animate(_ body: () -> Void) { withAnimation(spring, body) }
-}
-
-/// Measured from native NSMenu rows on macOS 27 (2x screenshots, values in points).
 enum Metrics {
+    /// Width of the menu and of the SwiftUI rows inside it.
     static let menuWidth: CGFloat = 300
-    static let inset: CGFloat = 14              // text inset, same as native items
-    static let highlightInset: CGFloat = 5.5    // native highlight inset from the menu edge
-    static let highlightRadius: CGFloat = 6
-    static let rowHeight: CGFloat = 24          // native single-line item height
-    static let deviceRowHeight: CGFloat = 32    // rows with a 26 pt icon circle
+    /// Left and right margin of native menu items on macOS 27.
+    static let inset: CGFloat = 16
 }
 
 enum SpeakerSymbol {
@@ -27,7 +17,7 @@ enum SpeakerSymbol {
 }
 
 extension Double {
-    /// "+11.3" / "−1.1" with a real minus sign.
+    /// "+11.3" or "−1.1", with a real minus sign.
     var signedDB: String {
         if abs(self) < 0.05 { return "0.0" }
         return (self > 0 ? "+" : "\u{2212}") + String(format: "%.1f", abs(self))

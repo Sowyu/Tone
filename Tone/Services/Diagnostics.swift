@@ -5,6 +5,7 @@ import Foundation
 /// Then Tone writes per-tap stats once a second to ~/Library/Logs/Tone/diagnostics.log
 /// and accepts the distributed notification "com.gooober.tone.debug.set" with
 /// userInfo {key, volume?, eqEnabled?, preset?, output?} so scripts can drive it.
+/// The hooks that open the menu and windows are in AppDelegate.
 @MainActor
 final class Diagnostics {
     static let shared = Diagnostics()

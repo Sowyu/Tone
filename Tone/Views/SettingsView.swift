@@ -6,49 +6,69 @@ struct SettingsView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var renaming: String?
     @State private var newName = ""
+    @FocusState private var nameFieldFocused: Bool
 
     var body: some View {
         @Bindable var store = model.store
         Form {
-            Section("General") {
-                Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, on in
-                        model.launchAtLogin = on
+            Section {
+                Toggle("Open at login", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { _, isOn in
+                        model.launchAtLogin = isOn
                         launchAtLogin = model.launchAtLogin
                     }
                 if SMAppService.mainApp.status == .requiresApproval {
-                    Button("Approve in Login Items…") { SMAppService.openSystemSettingsLoginItems() }
+                    LabeledContent("Login item needs approval") {
+                        Button("Open Login Items…") { SMAppService.openSystemSettingsLoginItems() }
+                    }
                 }
-                Picker("Overdrive limit", selection: $store.state.overdriveLimit) {
-                    Text("100% (off)").tag(1.0)
+                Picker("Menu bar icon", selection: $store.state.iconStyle) {
+                    ForEach(MenuBarIconStyle.allCases) { style in
+                        Label(style.title, systemImage: style.symbol).tag(style)
+                    }
+                }
+            }
+
+            Section {
+                Picker("Maximum app volume", selection: $store.state.overdriveLimit) {
+                    Text("100%").tag(1.0)
                     Text("125%").tag(1.25)
                     Text("150%").tag(1.5)
                     Text("200%").tag(2.0)
                 }
-                Picker("Menu bar icon", selection: $store.state.iconStyle) {
-                    ForEach(MenuBarIconStyle.allCases) { Text($0.title).tag($0) }
-                }
+            } footer: {
+                Text("Above 100%, Tone limits peaks so the boosted sound doesn't distort.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Section("Presets") {
+            Section("Equalizer presets") {
                 if model.presets.custom.isEmpty {
-                    Text("Save an EQ as a preset from the Preset menu.").foregroundStyle(.secondary)
+                    Text("Add presets from an app's Preset menu.")
+                        .foregroundStyle(.secondary)
                 }
                 ForEach(model.presets.custom) { preset in
-                    HStack {
+                    LabeledContent {
+                        Button("Rename") {
+                            newName = preset.name
+                            renaming = preset.name
+                            nameFieldFocused = true
+                        }
+                        Button("Delete", role: .destructive) { model.presets.delete(preset.name) }
+                    } label: {
                         if renaming == preset.name {
-                            TextField("Name", text: $newName)
+                            TextField("Preset Name", text: $newName)
+                                .labelsHidden()
+                                .focused($nameFieldFocused)
                                 .onSubmit {
                                     model.presets.rename(preset.name, to: newName)
                                     renaming = nil
                                 }
+                                .onExitCommand { renaming = nil }
                         } else {
                             Text(preset.name)
                         }
-                        Spacer()
-                        Button("Rename") { renaming = preset.name; newName = preset.name }
-                        Button(role: .destructive) { model.presets.delete(preset.name) } label: { Image(systemName: "trash") }
-                            .accessibilityLabel("Delete \(preset.name)")
                     }
                 }
             }
@@ -56,34 +76,39 @@ struct SettingsView: View {
             if !store.state.hidden.isEmpty {
                 Section("Hidden apps") {
                     ForEach(store.state.hidden, id: \.self) { key in
-                        HStack {
-                            Text(model.displayName(key))
-                            Spacer()
-                            Button("Show") { model.unhide(key) }
+                        LabeledContent(model.displayName(key)) {
+                            Button("Show in Menu") { model.unhide(key) }
                         }
                     }
                 }
             }
 
             Section("Permissions") {
-                LabeledContent("System Audio Recording") {
+                LabeledContent("System audio recording") {
                     switch model.permission.status {
-                    case .authorized: Text("Allowed").foregroundStyle(.green)
-                    case .denied: Button("Open Privacy Settings") { model.permission.openSystemSettings() }
-                    case .unknown: Button("Request Access") { model.permission.request() }
+                    case .authorized: Text("Allowed")
+                    case .denied: Button("Open Privacy Settings…") { model.permission.openSystemSettings() }
+                    case .unknown: Button("Allow…") { model.permission.request() }
                     }
                 }
-                LabeledContent("Now Playing") {
+                LabeledContent {
                     switch model.nowPlaying.availability {
-                    case .available, .starting: Text("Using media-control").foregroundStyle(.secondary)
-                    case .missingTool: Text("brew install media-control").textSelection(.enabled).foregroundStyle(.secondary)
-                    case .failed(let reason): Text(reason).foregroundStyle(.secondary)
+                    case .available, .starting: Text("Available")
+                    case .missingTool, .failed: Text("Unavailable")
+                    }
+                } label: {
+                    Text("Now Playing")
+                    switch model.nowPlaying.availability {
+                    case .available, .starting: EmptyView()
+                    case .missingTool: Text("Install media-control with Homebrew, then reopen Tone.")
+                    case .failed(let reason): Text(reason)
                     }
                 }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 480)
+        .frame(width: 460)
+        .fixedSize(horizontal: false, vertical: true)
         .onAppear { model.permission.refresh() }
     }
 }

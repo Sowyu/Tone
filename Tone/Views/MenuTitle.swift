@@ -1,111 +1,80 @@
 import AppKit
 
-/// Attributed titles for native NSMenuItems. macOS 27 hides `NSMenuItem.image`,
-/// but images inside an attributed title still draw, so the icon goes there and
-/// AppKit keeps native highlight, clicks, keyboard and submenu arrows.
+/// Attributed titles for native menu items. macOS 27 doesn't draw
+/// `NSMenuItem.image`, but an image attached to the title still draws, so the
+/// icon goes there and the item keeps its native highlight, keyboard handling
+/// and submenu arrow.
 @MainActor
 enum MenuTitle {
-    private static let font = NSFont.menuFont(ofSize: 13)
-    /// Right edge for trailing values (battery, volume), before the submenu arrow.
-    private static let trailingTab: CGFloat = 250
+    private static let font = NSFont.menuFont(ofSize: 0)
+    private static let digits = NSFont.monospacedDigitSystemFont(ofSize: font.pointSize, weight: .regular)
+    private static let iconGap: CGFloat = 7
+    /// Right edge of the trailing value, measured from the title's origin. With
+    /// AppKit's margins and submenu arrow this makes the item `Metrics.menuWidth` wide.
+    private static let trailingEdge = Metrics.menuWidth - 74
 
     static func device(name: String, symbol: String, selected: Bool, trailing: String?) -> NSAttributedString {
-        let title = NSMutableAttributedString()
-        title.append(attachment(circleIcon(symbol: symbol, selected: selected), size: 26))
-        title.append(NSAttributedString(string: "  " + name, attributes: [.font: font]))
-        if let trailing { title.append(trailingText(trailing, color: .secondaryLabelColor)) }
-        title.addAttribute(.paragraphStyle, value: paragraph(), range: NSRange(location: 0, length: title.length))
-        return title
+        row(icon: circleIcon(symbol: symbol, selected: selected), size: 26, name: name, color: .labelColor, trailing: trailing)
     }
 
-    static func app(name: String, icon: NSImage, percent: String, overdrive: Bool, dimmed: Bool) -> NSAttributedString {
-        let title = NSMutableAttributedString()
-        title.append(attachment(icon, size: 18))
-        title.append(NSAttributedString(string: "  " + name, attributes: [
-            .font: font, .foregroundColor: dimmed ? NSColor.tertiaryLabelColor : NSColor.labelColor,
-        ]))
-        title.append(trailingText(percent, color: overdrive ? .systemOrange : .secondaryLabelColor))
-        title.addAttribute(.paragraphStyle, value: paragraph(), range: NSRange(location: 0, length: title.length))
-        return title
+    static func app(name: String, icon: NSImage, trailing: String, dimmed: Bool) -> NSAttributedString {
+        row(icon: icon, size: 18, name: name, color: dimmed ? .secondaryLabelColor : .labelColor, trailing: trailing)
     }
 
-    static func symbol(_ image: NSImage, title: String) -> NSAttributedString {
-        let result = NSMutableAttributedString()
-        result.append(attachment(image, size: 18))
-        result.append(NSAttributedString(string: "  " + title, attributes: [.font: font]))
-        return result
-    }
-
-    // MARK: Pieces
-
-    private static func paragraph() -> NSParagraphStyle {
-        let style = NSMutableParagraphStyle()
-        style.tabStops = [NSTextTab(textAlignment: .right, location: trailingTab)]
-        return style
-    }
-
-    private static func trailingText(_ text: String, color: NSColor) -> NSAttributedString {
-        NSAttributedString(string: "\t" + text, attributes: [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular), .foregroundColor: color,
-        ])
-    }
-
-    /// Vertically centred on the text like an inline icon.
-    private static func attachment(_ image: NSImage, size: CGFloat) -> NSAttributedString {
+    private static func row(icon: NSImage, size: CGFloat, name: String, color: NSColor, trailing: String?) -> NSAttributedString {
         let attachment = NSTextAttachment()
-        attachment.image = image
+        attachment.image = icon
+        // Centred on the text's cap height, like an inline symbol.
         attachment.bounds = CGRect(x: 0, y: (font.capHeight - size) / 2, width: size, height: size)
-        return NSAttributedString(attachment: attachment)
+        let title = NSMutableAttributedString(attachment: attachment)
+        // Kerning is ignored on an attachment, so the gap is a space stretched to `iconGap`.
+        title.append(NSAttributedString(string: " ", attributes: [.font: font, .kern: iconGap - width(of: " ", font: font)]))
+
+        var room = trailingEdge - size - iconGap
+        if let trailing { room -= width(of: trailing, font: digits) + 12 }
+        title.append(NSAttributedString(string: truncated(name, to: room), attributes: [.font: font, .foregroundColor: color]))
+        if let trailing {
+            title.append(NSAttributedString(string: "\t" + trailing,
+                                            attributes: [.font: digits, .foregroundColor: NSColor.secondaryLabelColor]))
+        }
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.tabStops = [NSTextTab(textAlignment: .right, location: trailingEdge)]
+        title.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: title.length))
+        return title
+    }
+
+    private static func width(of text: String, font: NSFont) -> CGFloat {
+        (text as NSString).size(withAttributes: [.font: font]).width
+    }
+
+    /// Menus never truncate attributed titles, so a long name is cut here.
+    private static func truncated(_ text: String, to room: CGFloat) -> String {
+        guard width(of: text, font: font) > room else { return text }
+        var head = Substring(text)
+        while !head.isEmpty, width(of: head + "…", font: font) > room { head = head.dropLast() }
+        return head.trimmingCharacters(in: .whitespaces) + "…"
     }
 
     private static var circles: [String: NSImage] = [:]
 
-    /// The system Sound menu's device icon: accent circle when selected, grey otherwise.
-    /// Drawn per appearance, so it follows light and dark mode and the accent colour.
-    static func circleIcon(symbol: String, selected: Bool) -> NSImage {
+    /// The system Sound menu's device icon: an accent circle when selected, grey otherwise.
+    /// The drawing handler runs per appearance, so it follows light and dark mode.
+    private static func circleIcon(symbol: String, selected: Bool) -> NSImage {
         let key = "\(symbol)|\(selected)"
         if let cached = circles[key] { return cached }
         let image = NSImage(size: NSSize(width: 26, height: 26), flipped: false) { rect in
             (selected ? NSColor.controlAccentColor : NSColor.labelColor.withAlphaComponent(0.1)).setFill()
             NSBezierPath(ovalIn: rect).fill()
-            let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
+            let configuration = NSImage.SymbolConfiguration(pointSize: 13, weight: .medium)
                 .applying(.init(paletteColors: [selected ? .white : NSColor.labelColor.withAlphaComponent(0.75)]))
-            if let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config) {
-                let s = glyph.size
-                glyph.draw(in: NSRect(x: rect.midX - s.width / 2, y: rect.midY - s.height / 2, width: s.width, height: s.height))
+            if let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(configuration) {
+                let size = glyph.size
+                glyph.draw(in: NSRect(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2,
+                                      width: size.width, height: size.height))
             }
             return true
         }
         circles[key] = image
-        return image
-    }
-
-    /// Listening mode glyphs. Adaptive has no SF Symbol, so it's a person with a sparkle.
-    static func modeIcon(_ mode: ListeningMode) -> NSImage {
-        let name: String = switch mode {
-        case .off: "person.fill"
-        case .transparency: "person.and.background.dotted"
-        case .noiseCancellation: "person.bust.circle.fill"
-        case .adaptive: "person.fill"
-        }
-        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
-        let base = NSImage(systemSymbolName: name, accessibilityDescription: mode.title)?.withSymbolConfiguration(config) ?? NSImage()
-        guard mode == .adaptive else {
-            base.isTemplate = true
-            return base
-        }
-        let sparkle = NSImage(systemSymbolName: "sparkle", accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: 7, weight: .bold))
-        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
-            let s = base.size
-            base.draw(in: NSRect(x: rect.midX - s.width / 2 - 1, y: rect.midY - s.height / 2, width: s.width, height: s.height))
-            if let sparkle {
-                sparkle.draw(in: NSRect(x: rect.maxX - sparkle.size.width, y: rect.maxY - sparkle.size.height,
-                                        width: sparkle.size.width, height: sparkle.size.height))
-            }
-            return true
-        }
-        image.isTemplate = true
         return image
     }
 }

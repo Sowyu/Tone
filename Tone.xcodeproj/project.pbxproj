@@ -26,13 +26,11 @@
 		A581E5FB0204646B4B48E771 /* AudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B1A2DD6269A31B9E8E65BB7 /* AudioEngine.swift */; };
 		BB9803278E2BE04A7010A99C /* NowPlayingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF920145CE6D8865F9540019 /* NowPlayingService.swift */; };
 		CC39A06C5A9D88419CB5493F /* MenuTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E05735B93D1D1E582461BEC /* MenuTitle.swift */; };
-		D8F01597F5E757DE4FAB3847 /* ToneSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099B14BEB5BD4038D651E331 /* ToneSlider.swift */; };
 		F893F912F06BD55ABA17FEAF /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DC86D0145E94528DDEE74CC /* Diagnostics.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		097E3C1F38908281B4124E51 /* DSPKernel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DSPKernel.swift; sourceTree = "<group>"; };
-		099B14BEB5BD4038D651E331 /* ToneSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneSlider.swift; sourceTree = "<group>"; };
 		1B1A2DD6269A31B9E8E65BB7 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
 		2E05735B93D1D1E582461BEC /* MenuTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuTitle.swift; sourceTree = "<group>"; };
 		390F5DB02E3299738531A9DA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -135,7 +133,6 @@
 				2E05735B93D1D1E582461BEC /* MenuTitle.swift */,
 				80903A636F9301DA72A58E72 /* SettingsView.swift */,
 				390F5DB02E3299738531A9DA /* Theme.swift */,
-				099B14BEB5BD4038D651E331 /* ToneSlider.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -233,7 +230,6 @@
 				96E3D5D072C4944E4B4E2844 /* SettingsView.swift in Sources */,
 				9EC112EEB6A0816A3C26D10D /* Theme.swift in Sources */,
 				41B0EFF43978800F7F2F4675 /* ToneApp.swift in Sources */,
-				D8F01597F5E757DE4FAB3847 /* ToneSlider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

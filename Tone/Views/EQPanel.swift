@@ -1,55 +1,39 @@
 import SwiftUI
 
-/// EQ popover content: response graph, Preamp and Width.
+/// Content of an app's Equalizer window: the response graph above Preamp and Width.
 struct EQPanel: View {
     @Environment(AppModel.self) private var model
     let key: String
 
     var body: some View {
         let eq = model.settings(key).eq
-        let preamp = Binding(get: { model.settings(key).eq.preamp },
-                             set: { v in model.setEQ(key) { $0.preamp = (v * 10).rounded() / 10 } })
-        let width = Binding(get: { model.settings(key).eq.q },
-                            set: { v in model.setEQ(key) { $0.q = (v * 10).rounded() / 10 } })
-        VStack(spacing: 0) {
+        VStack(spacing: 16) {
             EQGraph(eq: eq) { index, value in
                 model.setEQ(key) { $0.bands[index] = value }
             }
-            .frame(height: 222)
-            .padding(.horizontal, Metrics.inset)
-            .padding(.top, 12)
-            .padding(.bottom, 10)
+            .frame(height: 220)
 
-            Divider()
-            ParameterRow(title: "Preamp", value: "\(eq.preamp.signedDB) dB") {
-                ParameterSlider(value: preamp, range: EQSettings.range, neutral: 0, fillFromNeutral: false, label: "Preamp")
-            }
-            Divider()
-            ParameterRow(title: "Width", value: String(format: "%.1f Q", eq.q)) {
-                ParameterSlider(value: width, range: EQSettings.qRange, neutral: EQSettings.flat.q, label: "Width")
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
+                parameter("Preamp", value: "\(eq.preamp.signedDB) dB", range: EQSettings.range, \.preamp)
+                parameter("Width", value: String(format: "Q %.1f", eq.q), range: EQSettings.qRange, \.q)
             }
         }
-        .font(.system(size: 13))
-        .frame(width: 420)
+        .padding(20)
+        .frame(width: 440)
     }
-}
 
-private struct ParameterRow<S: View>: View {
-    let title: String
-    let value: String
-    @ViewBuilder let slider: S
-
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text(value).monospacedDigit().foregroundStyle(.secondary)
-            }
-            slider
+    private func parameter(_ title: String, value: String, range: ClosedRange<Double>,
+                           _ path: WritableKeyPath<EQSettings, Double>) -> some View {
+        let binding = Binding(get: { model.settings(key).eq[keyPath: path] },
+                              set: { new in model.setEQ(key) { $0[keyPath: path] = (new * 10).rounded() / 10 } })
+        return GridRow {
+            Text(title)
+            Slider(value: binding, in: range) { Text(title) }.labelsHidden()
+            Text(value)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: 58, alignment: .trailing)
         }
-        .padding(.horizontal, Metrics.inset)
-        .padding(.vertical, 12)
     }
 }
 
@@ -159,8 +143,9 @@ private struct EQHandles: View, Animatable {
             ForEach(0..<DSPKernel.bandCount, id: \.self) { i in
                 Circle()
                     .fill(.white)
-                    .frame(width: 8, height: 8)
-                    .overlay(Circle().strokeBorder(.black.opacity(0.35), lineWidth: 1.5))
+                    .frame(width: 10, height: 10)
+                    .shadow(color: .black.opacity(0.3), radius: 1, y: 0.5)
+                    .overlay(Circle().strokeBorder(.black.opacity(0.15), lineWidth: 0.5))
                     .overlay(Circle().strokeBorder(Color.accentColor, lineWidth: 2).padding(-3).opacity(focused && selected == i ? 1 : 0))
                     .position(x: layout.x(i), y: layout.y(db[i]))
             }
@@ -186,13 +171,13 @@ struct EQGraph: View {
             ZStack(alignment: .topLeading) {
                 grid(layout)
                 EQResponseShape(vector: vector, closedToZero: true)
-                    .fill(LinearGradient(stops: [.init(color: Color.primary.opacity(0.22), location: 0),
-                                                 .init(color: Color.primary.opacity(0.03), location: 0.5),
-                                                 .init(color: Color.primary.opacity(0.22), location: 1)],
+                    .fill(LinearGradient(stops: [.init(color: Color.accentColor.opacity(0.3), location: 0),
+                                                 .init(color: Color.accentColor.opacity(0.05), location: 0.5),
+                                                 .init(color: Color.accentColor.opacity(0.3), location: 1)],
                                          startPoint: UnitPoint(x: 0, y: layout.y(12) / geo.size.height),
                                          endPoint: UnitPoint(x: 0, y: layout.y(-12) / geo.size.height)))
                 EQResponseShape(vector: vector)
-                    .stroke(Color.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                 EQHandles(vector: vector, selected: selected, focused: focused && usingKeyboard)
                 labels(layout)
             }
@@ -209,7 +194,7 @@ struct EQGraph: View {
                     }
                     .onEnded { _ in dragBand = nil }
             )
-            .simultaneousGesture(TapGesture(count: 2).onEnded { Motion.animate { onChange(selected, 0) } })
+            .simultaneousGesture(TapGesture(count: 2).onEnded { withAnimation(.snappy) { onChange(selected, 0) } })
         }
         .focusable()
         .focused($focused)
@@ -238,7 +223,7 @@ struct EQGraph: View {
                 p.addLine(to: CGPoint(x: layout.plot.maxX, y: layout.y(db)))
             }
         }
-        .stroke(Color.primary.opacity(0.07), lineWidth: 1)
+        .stroke(.quaternary, lineWidth: 1)
     }
 
     private func labels(_ layout: EQLayout) -> some View {
@@ -259,7 +244,7 @@ struct EQGraph: View {
                     .position(x: layout.plot.maxX + EQLayout.axisWidth / 2 + 2, y: layout.y(db))
             }
         }
-        .font(.system(size: 11, weight: .semibold))
+        .font(.caption)
         .foregroundStyle(.secondary)
         .allowsHitTesting(false)
     }

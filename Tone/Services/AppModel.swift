@@ -2,14 +2,6 @@ import AppKit
 import Observation
 import ServiceManagement
 
-/// One row in the Applications section.
-struct AppRowItem: Identifiable, Equatable {
-    let id: String
-    let name: String
-    let isRunning: Bool
-    let isPlaying: Bool
-}
-
 /// Ties the audio, device, now playing and storage services to the UI.
 @MainActor @Observable
 final class AppModel {
@@ -22,8 +14,7 @@ final class AppModel {
     let bluetooth = BluetoothAudio()
     @ObservationIgnored let engine = AudioEngine()
 
-    // UI state
-    /// True while the menu is open; rows only animate (marquee) then.
+    /// True while the menu is open; the Now Playing marquee only runs then.
     var isMenuOpen = false
 
     /// Apps that produced audio at least once since they launched.
@@ -38,8 +29,8 @@ final class AppModel {
         engine.setOutputDevice(uid: devices.defaultOutput?.uid)
         nowPlaying.start()
         syncEngine()
-        // Event driven: no polling timers. The engine asks for a re-sync when a
-        // neutral tap is due for release or a new tap needs its health check.
+        // No polling: the engine asks for a re-sync when a neutral tap is due
+        // for release or a new tap needs its health check.
         engine.onNeedsSync = { [weak self] in self?.healthCheck() }
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
@@ -82,24 +73,17 @@ final class AppModel {
         engine.sync(requests, allowTapping: canTap)
     }
 
-    // MARK: Rows
+    // MARK: Applications
 
-    var applicationRows: [AppRowItem] {
+    /// Apps in the Applications section, in menu order: everything that has
+    /// played since it launched, plus pinned apps, minus hidden ones.
+    var applicationKeys: [String] {
         let state = store.state
-        let running = processes.apps
-        var keys = Set(running.values.filter { everPlayed.contains($0.id) || $0.isPlaying }.map(\.id))
+        var keys = Set(processes.apps.values.filter { everPlayed.contains($0.id) || $0.isPlaying }.map(\.id))
         keys.formUnion(state.pinned)
         keys.subtract(state.hidden)
-        let ordered = SettingsStore.ordered(keys.sorted { displayName($0).localizedCompare(displayName($1)) == .orderedAscending },
-                                            by: state.appOrder)
-        return ordered.map { key in
-            AppRowItem(id: key, name: displayName(key), isRunning: running[key] != nil, isPlaying: running[key]?.isPlaying ?? false)
-        }
-    }
-
-    var nowPlayingRows: [NowPlayingSession] {
-        let byID = Dictionary(nowPlaying.sessions.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        return SettingsStore.ordered(nowPlaying.sessions.map(\.id), by: store.state.nowPlayingOrder).compactMap { byID[$0] }
+        return SettingsStore.ordered(keys.sorted { displayName($0).localizedCompare(displayName($1)) == .orderedAscending },
+                                     by: state.appOrder)
     }
 
     func displayName(_ key: String) -> String {
@@ -184,19 +168,10 @@ final class AppModel {
 
     func unhide(_ key: String) { store.state.hidden.removeAll { $0 == key } }
 
-    func moveApp(_ key: String, to target: String) {
-        store.state.appOrder = SettingsStore.move(key, to: target, visible: applicationRows.map(\.id), order: store.state.appOrder)
-    }
-
-    func moveNowPlaying(_ key: String, to target: String) {
-        store.state.nowPlayingOrder = SettingsStore.move(key, to: target, visible: nowPlayingRows.map(\.id),
-                                                         order: store.state.nowPlayingOrder)
-    }
-
     func moveApp(_ key: String, by delta: Int) {
-        let rows = applicationRows.map(\.id)
-        guard let i = rows.firstIndex(of: key), rows.indices.contains(i + delta) else { return }
-        moveApp(key, to: rows[i + delta])
+        let keys = applicationKeys
+        guard let index = keys.firstIndex(of: key), keys.indices.contains(index + delta) else { return }
+        store.state.appOrder = SettingsStore.move(key, to: keys[index + delta], visible: keys, order: store.state.appOrder)
     }
 
     private func requestPermissionIfNeeded() {

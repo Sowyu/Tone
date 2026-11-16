@@ -22,38 +22,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         model = AppModel()
         menu = MenuController(model: model) { [weak self] in self?.showSettings() }
-        if ProcessInfo.processInfo.arguments.contains("--open") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { MainActor.assumeIsolated { self.menu.open() } }
-        }
-        if Diagnostics.shared.enabled {
-            DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.panel"), object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.menu.open() }
-            }
-            DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.close"), object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.menu.close() }
-            }
-            DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.expand"), object: nil, queue: .main) { [weak self] note in
-                let row = note.userInfo?["row"] as? String ?? ""
-                let eq = (note.userInfo?["eq"] as? NSNumber)?.boolValue ?? false
-                MainActor.assumeIsolated { _ = (row, eq); self?.menu.open() }
-            }
-        }
+        if Diagnostics.shared.enabled { addDebugHooks() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         model.shutdown()
     }
 
-    func showSettings() {
-        if settingsWindow == nil {
+    private func showSettings() {
+        let window = settingsWindow ?? {
             let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView().environment(model)))
             window.title = "Tone Settings"
-            window.styleMask = [.titled, .closable, .miniaturizable]
+            window.styleMask = [.titled, .closable]
             window.isReleasedWhenClosed = false
             window.center()
             settingsWindow = window
-        }
+            return window
+        }()
         NSApp.activate()
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    /// Lets scripts open the UI: post "com.gooober.tone.debug.<name>" as a distributed notification.
+    private func addDebugHooks() {
+        // DebugAppearance "light" or "dark" overrides the system appearance.
+        if let name = UserDefaults.standard.string(forKey: "DebugAppearance") {
+            NSApp.appearance = NSAppearance(named: name == "light" ? .aqua : .darkAqua)
+        }
+        let hooks: [String: @MainActor (AppDelegate) -> Void] = [
+            "panel": { $0.menu.debugOpen() },
+            "settings": { $0.showSettings() },
+            "equalizer": { delegate in
+                if let key = delegate.model.applicationKeys.first { delegate.menu.showEqualizer(key) }
+            },
+        ]
+        for (name, hook) in hooks {
+            DistributedNotificationCenter.default().addObserver(
+                forName: .init("com.gooober.tone.debug.\(name)"), object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self.map(hook) }
+            }
+        }
     }
 }

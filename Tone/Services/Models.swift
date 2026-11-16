@@ -40,16 +40,20 @@ enum MenuBarIconStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .speaker: "Speaker (follows volume)"
+        case .speaker: "Speaker"
         case .slider: "Sliders"
         case .waveform: "Waveform"
         }
     }
-}
 
-enum PopoverSection: String, CaseIterable, Identifiable, Codable {
-    case output = "Output", input = "Input", nowPlaying = "Now Playing", applications = "Applications"
-    var id: String { rawValue }
+    /// The speaker style swaps this for a glyph that follows the output volume.
+    var symbol: String {
+        switch self {
+        case .speaker: "speaker.wave.2.fill"
+        case .slider: "slider.horizontal.3"
+        case .waveform: "waveform"
+        }
+    }
 }
 
 /// Magnitude response of the same biquads the DSP runs, for drawing the EQ curve.
