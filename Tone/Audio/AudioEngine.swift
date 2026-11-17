@@ -13,8 +13,8 @@ struct TapRequest {
 /// Owns every AppTap. Main thread only.
 @MainActor
 final class AudioEngine {
-    static let aggregateUIDPrefix = "com.gooober.tone.aggregate."
-    static let log = Logger(subsystem: "com.gooober.tone", category: "audio")
+    static let aggregateUIDPrefix = "com.sowyu.tone.aggregate."
+    static let log = Logger(subsystem: "com.sowyu.tone", category: "audio")
 
     private var taps: [String: AppTap] = [:]
     private var neutralSince: [String: Date] = [:]

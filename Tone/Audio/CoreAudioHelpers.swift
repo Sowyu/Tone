@@ -106,7 +106,7 @@ final class PropertyListener: @unchecked Sendable {
     private let block: AudioObjectPropertyListenerBlock
     private var active = false
 
-    private static let queue = DispatchQueue(label: "com.gooober.tone.listeners")
+    private static let queue = DispatchQueue(label: "com.sowyu.tone.listeners")
 
     /// `handler` runs on the main thread, also while the menu is open.
     init(_ object: AudioObjectID, _ address: AudioObjectPropertyAddress, handler: @escaping @MainActor () -> Void) {

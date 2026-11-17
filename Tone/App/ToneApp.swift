@@ -56,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SettingsStyle.present(window)
     }
 
-    /// Lets scripts open the UI: post "com.gooober.tone.debug.<name>" as a distributed
+    /// Lets scripts open the UI: post "com.sowyu.tone.debug.<name>" as a distributed
     /// notification. "expand" and "keys" take their argument as the notification's object.
     private func addDebugHooks() {
         // DebugAppearance "light" or "dark" overrides the system appearance.
@@ -72,7 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ]
         for (name, hook) in hooks {
             DistributedNotificationCenter.default().addObserver(
-                forName: .init("com.gooober.tone.debug.\(name)"), object: nil, queue: .main) { [weak self] note in
+                forName: .init("com.sowyu.tone.debug.\(name)"), object: nil, queue: .main) { [weak self] note in
                 let argument = note.object as? String
                 MainActor.assumeIsolated { if let self { hook(self, argument) } }
             }

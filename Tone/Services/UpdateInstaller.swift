@@ -57,7 +57,7 @@ enum UpdateInstaller {
         guard app.pathExtension == "app",
               try app.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true,
               let info = try PropertyListSerialization.propertyList(from: Data(contentsOf: app.appendingPathComponent("Contents/Info.plist")), format: nil) as? [String: Any],
-              info["CFBundleIdentifier"] as? String == "com.gooober.tone",
+              info["CFBundleIdentifier"] as? String == "com.sowyu.tone",
               info["CFBundleExecutable"] as? String == "Tone",
               let version = info["CFBundleShortVersionString"] as? String,
               AppUpdate.versionNumbers(version) != nil else {
@@ -539,7 +539,7 @@ enum UpdateInstaller {
             _ = trashStaleUpdateFolders(keeping: work, in: workRoot(for: destination))
             return 0
         } catch {
-            let preferences = UserDefaults(suiteName: "com.gooober.tone")!
+            let preferences = UserDefaults(suiteName: "com.sowyu.tone")!
             preferences.set("Automatic update failed. Your previous copy was kept. \(error.localizedDescription)", forKey: "updateInstallError")
             preferences.synchronize()
             if let plan = try? readPlan(planURL), kill(plan.parentPID, 0) != 0 {

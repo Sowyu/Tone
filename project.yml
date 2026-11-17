@@ -1,6 +1,6 @@
 name: Tone
 options:
-  bundleIdPrefix: com.gooober
+  bundleIdPrefix: com.sowyu
   deploymentTarget:
     macOS: "15.0"
   createIntermediateGroups: true
@@ -20,7 +20,7 @@ targets:
       - path: Tone
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.gooober.tone
+        PRODUCT_BUNDLE_IDENTIFIER: com.sowyu.tone
         PRODUCT_NAME: Tone
         INFOPLIST_FILE: Tone/Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: Tone/Resources/Tone.entitlements

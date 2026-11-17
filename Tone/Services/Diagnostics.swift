@@ -1,9 +1,9 @@
 import Foundation
 
 /// Opt-in test hooks, off by default:
-///   defaults write com.gooober.tone DebugControl -bool YES
+///   defaults write com.sowyu.tone DebugControl -bool YES
 /// Then Tone writes per-tap stats once a second to ~/Library/Logs/Tone/diagnostics.log
-/// and accepts the distributed notification "com.gooober.tone.debug.set" with
+/// and accepts the distributed notification "com.sowyu.tone.debug.set" with
 /// userInfo {key, volume?, eqEnabled?, preset?, output?} so scripts can drive it.
 /// The hooks that open the panel and windows are in AppDelegate.
 @MainActor
@@ -24,7 +24,7 @@ final class Diagnostics {
         FileManager.default.createFile(atPath: url.path, contents: nil)
         handle = try? FileHandle(forWritingTo: url)
 
-        DistributedNotificationCenter.default().addObserver(forName: .init("com.gooober.tone.debug.set"), object: nil, queue: .main) { note in
+        DistributedNotificationCenter.default().addObserver(forName: .init("com.sowyu.tone.debug.set"), object: nil, queue: .main) { note in
             let info = note.userInfo ?? [:]
             let key = info["key"] as? String
             let volume = (info["volume"] as? NSNumber)?.doubleValue

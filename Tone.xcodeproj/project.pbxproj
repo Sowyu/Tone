@@ -289,7 +289,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.gooober.tone;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sowyu.tone;
 				PRODUCT_NAME = Tone;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -310,7 +310,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.gooober.tone;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sowyu.tone;
 				PRODUCT_NAME = Tone;
 				SDKROOT = macosx;
 				SWIFT_STRICT_CONCURRENCY = complete;

@@ -4,7 +4,7 @@
 #   make release NOTES=build/notes.md [DRY_RUN=1]   build Tone.dmg and publish a GitHub release
 
 APP_NAME    := Tone
-BUNDLE_ID   := com.gooober.tone
+BUNDLE_ID   := com.sowyu.tone
 BUILD_DIR   := build
 DERIVED     := $(BUILD_DIR)/DerivedData
 PRODUCT     := $(DERIVED)/Build/Products/Release/$(APP_NAME).app

@@ -38,7 +38,7 @@ final class AirPodsLink: NSObject {
     @ObservationIgnored private var opening = false
     @ObservationIgnored private var pending: [[UInt8]] = []
 
-    private static let log = Logger(subsystem: "com.gooober.tone", category: "aacp")
+    private static let log = Logger(subsystem: "com.sowyu.tone", category: "aacp")
 
     /// "F8:1E:49:9D:7D:55".
     init(address: String) {
