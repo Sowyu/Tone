@@ -7,8 +7,10 @@
 <p align="center">Per-app volume and EQ, right in your menu bar.</p>
 
 <p align="center">
-  <img src="docs/panel.png" width="340" alt="Tone's menu bar panel">
+  <img src="docs/demo.gif" width="600" alt="Tone in action: switching outputs, setting an app's volume and shaping its EQ">
 </p>
+
+<p align="center"><a href="docs/demo.mp4">Watch the full-quality video</a></p>
 
 Tone is a menu bar app that lets you mix and shape audio per app. Click the icon and you'll see every app making sound, plus your output and input devices and what's currently playing.
 
