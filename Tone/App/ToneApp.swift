@@ -47,6 +47,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.styleMask = [.titled, .closable]
             SettingsStyle.prepareWindow(window)
             window.isReleasedWhenClosed = false
+            // Size to the SwiftUI content first, or center() centers an empty window.
+            if let content = window.contentViewController?.view { window.setContentSize(content.fittingSize) }
             window.center()
             settingsWindow = window
             return window
