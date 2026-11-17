@@ -13,6 +13,7 @@ final class AppModel {
     let permission = CapturePermission()
     let bluetooth = BluetoothAudio()
     @ObservationIgnored let engine = AudioEngine()
+    @ObservationIgnored private var hearing: HearingGuard?
 
     /// True while the panel is open; it only renders, and the marquee only runs, then.
     var isMenuOpen = false
@@ -37,6 +38,7 @@ final class AppModel {
             MainActor.assumeIsolated { self?.nowPlaying.pruneQuitApps() }
         })
         Diagnostics.shared.attach(self)
+        hearing = HearingGuard(model: self)
         #if DEBUG
         EQResponse.selfCheck()
         AirPodsLink.selfCheck()

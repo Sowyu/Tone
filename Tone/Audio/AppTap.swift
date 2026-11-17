@@ -34,7 +34,10 @@ final class AppTap {
     private(set) var lastMix: StereoMix
     let createdAt = Date()
 
-    init(key: String, processes: [AudioObjectID], outputUID: String, gain: Float, eq: EQSettings?, mix: StereoMix) throws {
+    /// With `meter`, the tap hears every process except `processes`, leaves their
+    /// audio playing and only measures it.
+    init(key: String, processes: [AudioObjectID], outputUID: String, gain: Float, eq: EQSettings?, mix: StereoMix,
+         meter: Bool = false) throws {
         self.key = key
         self.outputUID = outputUID
         self.processes = processes
@@ -42,10 +45,11 @@ final class AppTap {
         self.lastEQ = eq
         self.lastMix = mix
 
-        let description = CATapDescription(stereoMixdownOfProcesses: processes)
+        let description = meter ? CATapDescription(stereoGlobalTapButExcludeProcesses: processes)
+                                : CATapDescription(stereoMixdownOfProcesses: processes)
         description.uuid = UUID()
-        description.name = "Tone tap"
-        description.muteBehavior = .mutedWhenTapped
+        description.name = meter ? "Tone meter" : "Tone tap"
+        description.muteBehavior = meter ? .unmuted : .mutedWhenTapped
         description.isPrivate = true
         self.description = description
 
@@ -71,7 +75,7 @@ final class AppTap {
         let status = AudioHardwareCreateAggregateDevice(aggregate as CFDictionary, &device)
         aggregateID = device
         let rate = CA.get(device, CA.address(kAudioDevicePropertyNominalSampleRate), as: Float64.self) ?? 48_000
-        kernel = DSPKernel(sampleRate: rate)
+        kernel = DSPKernel(sampleRate: rate, writesOutput: !meter)
         kernel.update(gain: gain, eq: eq, mix: mix)
 
         do {

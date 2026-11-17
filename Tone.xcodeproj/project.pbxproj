@@ -17,6 +17,7 @@
 		1F3CDB2614DA212DB36FF2A1 /* ProcessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD49804B183AAE4F18CD66B3 /* ProcessMonitor.swift */; };
 		22221EC22D05DA4D1B2E8A51 /* get.m in Sources */ = {isa = PBXBuildFile; fileRef = C576999DFFC655BF0D70E991 /* get.m */; };
 		2429FB64ECA670DBA7E3B3B6 /* UpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F4859CAD121598A7D7BC158 /* UpdateController.swift */; };
+		2A18C150CF7FCCC1306ED235 /* HearingGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22D87C16A919F03B82714CAE /* HearingGuard.swift */; };
 		2BD33A5957007A36ED4FA664 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E22F670B162357A0367306 /* Models.swift */; };
 		2CE483E5B91B0AF5505AA65F /* Debounce.m in Sources */ = {isa = PBXBuildFile; fileRef = 68069058449819C35D7B1D1F /* Debounce.m */; };
 		2D69CDB1B3DEE5FE678FF069 /* UpdateInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5313A74540078F139C5A2A0 /* UpdateInstaller.swift */; };
@@ -97,6 +98,7 @@
 		1A3A515151EF48EF8C3EAD14 /* AppRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRows.swift; sourceTree = "<group>"; };
 		1B1A2DD6269A31B9E8E65BB7 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
 		222F40C5DCEACF9595363C67 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
+		22D87C16A919F03B82714CAE /* HearingGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HearingGuard.swift; sourceTree = "<group>"; };
 		27DAD5BBAB69D6613857F055 /* helpers.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = helpers.m; sourceTree = "<group>"; };
 		2C271979BF18BFE27B13D96A /* AirPodsLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPodsLink.swift; sourceTree = "<group>"; };
 		2EE26F640FEA33656892C825 /* now_playing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = now_playing.h; sourceTree = "<group>"; };
@@ -266,6 +268,7 @@
 				F7CBDBA0450A640395E56066 /* AppModel.swift */,
 				D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */,
 				8DC86D0145E94528DDEE74CC /* Diagnostics.swift */,
+				22D87C16A919F03B82714CAE /* HearingGuard.swift */,
 				40E22F670B162357A0367306 /* Models.swift */,
 				DF920145CE6D8865F9540019 /* NowPlayingService.swift */,
 				FD2CE59D657ABB101D11E2DC /* PresetStore.swift */,
@@ -504,6 +507,7 @@
 				0AFDB9674476754591BCC570 /* DeviceManager.swift in Sources */,
 				F893F912F06BD55ABA17FEAF /* Diagnostics.swift in Sources */,
 				0A0D7EFEEFDE0C67F3C84208 /* EQPanel.swift in Sources */,
+				2A18C150CF7FCCC1306ED235 /* HearingGuard.swift in Sources */,
 				AF3B3F318213DC05E4DDD56D /* MenuChrome.swift in Sources */,
 				2BD33A5957007A36ED4FA664 /* Models.swift in Sources */,
 				BB9803278E2BE04A7010A99C /* NowPlayingService.swift in Sources */,
