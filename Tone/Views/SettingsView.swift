@@ -15,9 +15,10 @@ struct SettingsView: View {
             HStack(spacing: 12) {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
-                    .frame(width: 32, height: 32)
+                    .frame(width: 52, height: 52)
+                    .padding(.vertical, -6)
                     .accessibilityHidden(true)
-                Text("Tone").font(.system(size: 17, weight: .semibold))
+                Text("Tone").font(.system(size: 20, weight: .semibold))
                 Spacer()
                 Link(destination: URL(string: "https://ko-fi.com/anikodev")!) {
                     Label("Donate on Ko-fi", systemImage: "cup.and.saucer")
