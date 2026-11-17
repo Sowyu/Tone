@@ -8,6 +8,12 @@ struct EQPanel: View {
     var body: some View {
         let eq = model.settings(key).eq
         VStack(spacing: 16) {
+            HStack {
+                Text("Equalizer").fontWeight(.semibold)
+                Spacer()
+                ResetButton(label: "Reset to Flat", isDefault: eq == .flat) { Motion.animate { model.resetEQ(key) } }
+            }
+            .padding(.bottom, -8)
             EQGraph(eq: eq) { index, value in
                 model.setEQ(key) { $0.bands[index] = value }
             }

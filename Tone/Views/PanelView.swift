@@ -122,12 +122,17 @@ struct VolumeHeader: View {
     let accessibilityLabel: String
     @Binding var value: Double
     var range: ClosedRange<Double> = 0...1
+    /// Shows a reset button beside the percentage that returns to this value.
+    var resetTo: Double?
 
     var body: some View {
         VStack(spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(title).fontWeight(.semibold)
                 Spacer()
+                if let resetTo {
+                    ResetButton(label: "Reset to \(resetTo.percent)", isDefault: value.percent == resetTo.percent) { value = resetTo }
+                }
                 Text(value.percent)
                     .monospacedDigit()
                     .foregroundStyle(value > 1.0001 ? AnyShapeStyle(Color.orange) : AnyShapeStyle(.secondary))
@@ -141,6 +146,28 @@ struct VolumeHeader: View {
             }
             .foregroundStyle(.secondary)
         }
+    }
+}
+
+/// A small counterclockwise arrow. Dimmed and inactive while the value is already the default.
+struct ResetButton: View {
+    let label: String
+    let isDefault: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 18, height: 18)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(isDefault ? 0.35 : 1)
+        .disabled(isDefault)
+        .help(label)
+        .accessibilityLabel(label)
     }
 }
 

@@ -163,6 +163,14 @@ final class AppModel {
         syncEngine()
     }
 
+    func resetEQ(_ key: String) {
+        store.update(key) {
+            $0.eq = .flat
+            $0.presetName = "Flat"
+        }
+        syncEngine()
+    }
+
     func resetVolume(_ key: String) {
         store.update(key) { $0.volume = 1 }
         syncEngine()

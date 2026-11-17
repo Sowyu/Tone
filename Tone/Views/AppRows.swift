@@ -218,7 +218,7 @@ struct AppControls: View {
         VStack(alignment: .leading, spacing: 0) {
             VolumeHeader(title: "Volume", accessibilityLabel: "\(model.displayName(key)) Volume",
                          value: Binding(get: { model.settings(key).volume }, set: { model.setVolume(key, $0) }),
-                         range: 0...model.overdriveLimit)
+                         range: 0...model.overdriveLimit, resetTo: 1)
                 .padding(.horizontal, Metrics.inset)
                 .padding(.top, 8)
                 .padding(.bottom, 8)
