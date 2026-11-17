@@ -146,10 +146,11 @@ final class NowPlayingService {
     // MARK: Commands
 
     /// MediaRemote command IDs.
-    private enum Command: Int { case play = 0, pause = 1, nextTrack = 4 }
+    private enum Command: Int { case play = 0, pause = 1, nextTrack = 4, previousTrack = 5 }
 
     func togglePlayPause(_ session: NowPlayingSession) { send(session.isPlaying ? .pause : .play, optimistic: session.id) }
     func next(_ session: NowPlayingSession) { send(.nextTrack, optimistic: nil) }
+    func previous(_ session: NowPlayingSession) { send(.previousTrack, optimistic: nil) }
 
     private func send(_ command: Command, optimistic id: String?) {
         guard let process = Self.adapterProcess(["send", String(command.rawValue)]) else { return }

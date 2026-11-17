@@ -117,6 +117,7 @@ struct NowPlayingRow: View {
             }
             .layoutPriority(-1)
             HStack(spacing: 2) {
+                MediaButton(symbol: "backward.fill", size: 13, label: "Previous Track") { model.nowPlaying.previous(session) }
                 MediaButton(symbol: session.isPlaying ? "pause.fill" : "play.fill", size: 16,
                             label: session.isPlaying ? "Pause" : "Play") { model.nowPlaying.togglePlayPause(session) }
                 MediaButton(symbol: "forward.fill", size: 13, label: "Next Track") { model.nowPlaying.next(session) }
