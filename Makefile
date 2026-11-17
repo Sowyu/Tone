@@ -60,6 +60,8 @@ check:
 	@mkdir -p $(BUILD_DIR)
 	swiftc -parse-as-library Tone/Services/Updates.swift scripts/check-updates.swift -o $(BUILD_DIR)/check-updates
 	$(BUILD_DIR)/check-updates
+	swiftc -O -parse-as-library Tone/Audio/DSPKernel.swift Tone/Services/Models.swift scripts/check-dsp.swift -o $(BUILD_DIR)/check-dsp
+	$(BUILD_DIR)/check-dsp
 
 release:
 	./scripts/release.sh $(if $(DRY_RUN),--dry-run) $(NOTES)

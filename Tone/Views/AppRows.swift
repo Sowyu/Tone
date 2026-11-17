@@ -224,6 +224,22 @@ struct AppControls: View {
                 .padding(.bottom, 8)
 
             BandDivider()
+            BandSlider(title: "Balance", accessibilityLabel: "\(model.displayName(key)) Balance",
+                       value: Binding(get: { model.settings(key).balance },
+                                      set: { model.setBalance(key, abs($0) < 0.05 ? 0 : $0) }),
+                       range: -1...1, leading: "L", trailing: "R", centered: true) { value in
+                abs(value) < 0.005 ? "Center" : "\(Int((abs(value) * 100).rounded()))% \(value < 0 ? "L" : "R")"
+            }
+
+            BandDivider()
+            BandSlider(title: "Crossfeed", accessibilityLabel: "\(model.displayName(key)) Crossfeed",
+                       value: Binding(get: { model.settings(key).crossfeed }, set: { model.setCrossfeed(key, $0) }),
+                       range: 0...1, leading: "", trailing: "") { value in
+                value < 0.005 ? "Off" : "\(Int((value * 100).rounded()))%"
+            }
+            .help("Blends a little of each side into the other so headphones sound less split, like speakers.")
+
+            BandDivider()
             HStack {
                 Text("Equalizer")
                 Spacer()
@@ -268,6 +284,42 @@ struct AppControls: View {
                 .padding(.horizontal, Metrics.highlightInset)
         )
         .padding(.vertical, 2)
+    }
+}
+
+/// A titled slider for the controls band, with the value on the right and small end labels.
+private struct BandSlider: View {
+    let title: String
+    let accessibilityLabel: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let leading: String
+    let trailing: String
+    /// A centred control has no "amount", so its track isn't filled from the left.
+    var centered = false
+    let format: (Double) -> String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                Spacer()
+                Text(format(value)).monospacedDigit().foregroundStyle(.secondary)
+            }
+            HStack(spacing: 8) {
+                if !leading.isEmpty { Text(leading).frame(width: 12, alignment: .leading) }
+                Slider(value: $value, in: range) { Text(accessibilityLabel) }
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .tint(centered ? Color.secondary.opacity(0.4) : nil)
+                    .accessibilityValue(format(value))
+                if !trailing.isEmpty { Text(trailing).frame(width: 12, alignment: .trailing) }
+            }
+            .font(.system(size: NSFont.smallSystemFontSize))
+            .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, Metrics.inset)
+        .padding(.vertical, 7)
     }
 }
 

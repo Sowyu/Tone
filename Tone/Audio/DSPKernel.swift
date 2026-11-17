@@ -4,7 +4,8 @@ import Foundation
 import Synchronization
 
 /// Real-time DSP for one tapped app: preamp, 10-band peaking EQ (vDSP biquads),
-/// smoothed gain and a peak limiter so overdrive past 100% doesn't clip.
+/// headphone crossfeed, balance, smoothed gain and a peak limiter so overdrive
+/// past 100% doesn't clip.
 ///
 /// Threading: `update` runs on the main thread and publishes parameters through a
 /// seqlock. `process` runs on the HAL IO thread. It never allocates, locks or
@@ -13,7 +14,10 @@ import Synchronization
 final class DSPKernel: @unchecked Sendable {
     static let bandCount = 10
     static let maxFrames = 4096
-    private static let coefficientOffset = 3
+    private static let coefficientOffset = 5
+    /// Crossfeed at full strength mixes the other side in at -6 dB.
+    static let maxCrossfeed: Float = 0.5
+    private static let ringSize = 64
     private static let paramCount = coefficientOffset + bandCount * 5
     private static let ceiling: Float = 0.98
 
@@ -39,6 +43,19 @@ final class DSPKernel: @unchecked Sendable {
     private let delayR: UnsafeMutablePointer<Float>
     private let left: UnsafeMutablePointer<Float>
     private let right: UnsafeMutablePointer<Float>
+    private var targetBalance: Float = 0
+    private var currentBalance: Float = 0
+    private var targetFeed: Float = 0
+    private var currentFeed: Float = 0
+    // Crossfeed: each side hears the other low-passed at 700 Hz and ~0.3 ms late,
+    // roughly how speakers reach the far ear.
+    private let lowpass: Float
+    private let feedDelay: Int
+    private var lowL: Float = 0
+    private var lowR: Float = 0
+    private let ringL: UnsafeMutablePointer<Float>
+    private let ringR: UnsafeMutablePointer<Float>
+    private var ringIndex = 0
 
     // Diagnostics, read by the main thread.
     let callbackCount = Atomic<UInt64>(0)
@@ -49,6 +66,10 @@ final class DSPKernel: @unchecked Sendable {
     init(sampleRate: Double) {
         self.sampleRate = sampleRate > 0 ? sampleRate : 48_000
         release = Float(exp(-1.0 / (0.15 * self.sampleRate)))
+        lowpass = Float(1 - exp(-2 * Double.pi * 700 / self.sampleRate))
+        feedDelay = min(Self.ringSize - 1, max(1, Int((0.0003 * self.sampleRate).rounded())))
+        ringL = .allocate(capacity: Self.ringSize); ringL.initialize(repeating: 0, count: Self.ringSize)
+        ringR = .allocate(capacity: Self.ringSize); ringR.initialize(repeating: 0, count: Self.ringSize)
         shared = .allocate(capacity: Self.paramCount)
         scratch = .allocate(capacity: Self.paramCount)
         let identity = Self.identityCoefficients()
@@ -66,7 +87,7 @@ final class DSPKernel: @unchecked Sendable {
     deinit {
         vDSP_biquad_DestroySetup(setupL)
         vDSP_biquad_DestroySetup(setupR)
-        [delayL, delayR, left, right].forEach { $0.deallocate() }
+        [delayL, delayR, left, right, ringL, ringR].forEach { $0.deallocate() }
         shared.deallocate()
         scratch.deallocate()
     }
@@ -74,11 +95,13 @@ final class DSPKernel: @unchecked Sendable {
     // MARK: Main thread
 
     /// `gain` is linear amplitude (1 = unchanged). Pass `eq: nil` to bypass the EQ.
-    func update(gain: Float, eq: EQSettings?) {
+    func update(gain: Float, eq: EQSettings?, mix: StereoMix = StereoMix()) {
         var values = [Double](repeating: 0, count: Self.paramCount)
         values[0] = Double(gain)
         values[1] = eq == nil ? 0 : 1
         values[2] = eq.map { pow(10, $0.preamp / 20) } ?? 1
+        values[3] = Double(min(max(mix.balance, -1), 1))
+        values[4] = Double(min(max(mix.crossfeed, 0), 1) * Self.maxCrossfeed)
         let coefficients = eq.map { Self.coefficients(for: $0, sampleRate: sampleRate) } ?? Self.identityCoefficients()
         for i in coefficients.indices { values[Self.coefficientOffset + i] = coefficients[i] }
 
@@ -132,6 +155,8 @@ final class DSPKernel: @unchecked Sendable {
         targetGain = Float(scratch[0])
         eqOn = scratch[1] != 0
         preamp = Float(scratch[2])
+        targetBalance = Float(scratch[3])
+        targetFeed = Float(scratch[4])
         let coefficients = scratch + Self.coefficientOffset
         vDSP_biquad_SetCoefficientsDouble(setupL, coefficients, 0, vDSP_Length(Self.bandCount))
         vDSP_biquad_SetCoefficientsDouble(setupR, coefficients, 0, vDSP_Length(Self.bandCount))
@@ -186,15 +211,37 @@ final class DSPKernel: @unchecked Sendable {
         }
         eqWasOn = eqOn
 
-        // 3. Smoothed gain and a peak limiter (instant attack, 150 ms release).
-        let step = (targetGain - currentGain) / Float(frames)
+        // 3. Crossfeed, balance, smoothed gain and a peak limiter (instant attack, 150 ms release).
+        let n = Float(frames)
+        let step = (targetGain - currentGain) / n
+        let balanceStep = (targetBalance - currentBalance) / n
+        let feedStep = (targetFeed - currentFeed) / n
+        let crossfeeding = currentFeed > 0 || targetFeed > 0
+        let mask = Self.ringSize - 1
         var gain = currentGain
+        var balance = currentBalance
+        var feed = currentFeed
         var env = envelope
         var peakOut: Float = 0
         for i in 0..<frames {
             gain += step
-            var l = left[i] * gain
-            var r = right[i] * gain
+            balance += balanceStep
+            var l = left[i]
+            var r = right[i]
+            if crossfeeding {
+                feed += feedStep
+                lowL += lowpass * (l - lowL)
+                lowR += lowpass * (r - lowR)
+                ringL[ringIndex] = lowL
+                ringR[ringIndex] = lowR
+                let late = (ringIndex - feedDelay) & mask
+                let norm = 1 / (1 + feed)
+                (l, r) = ((l + feed * ringR[late]) * norm, (r + feed * ringL[late]) * norm)
+                ringIndex = (ringIndex + 1) & mask
+            }
+            // Balance turns the far side down and leaves the near side alone.
+            l *= gain * (balance > 0 ? 1 - balance : 1)
+            r *= gain * (balance < 0 ? 1 + balance : 1)
             let peak = max(abs(l), abs(r))
             let needed = peak > Self.ceiling ? Self.ceiling / peak : 1
             env = needed < env ? needed : needed + (env - needed) * release
@@ -205,6 +252,8 @@ final class DSPKernel: @unchecked Sendable {
             peakOut = max(peakOut, max(abs(l), abs(r)))
         }
         currentGain = targetGain
+        currentBalance = targetBalance
+        currentFeed = targetFeed
         envelope = env.isFinite ? env : 1
         storeMax(peakInBits, peakIn)
         storeMax(peakOutBits, peakOut)

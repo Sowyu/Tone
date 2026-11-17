@@ -31,14 +31,16 @@ final class AppTap {
     private(set) var overloads = 0
     private(set) var lastGain: Float
     private(set) var lastEQ: EQSettings?
+    private(set) var lastMix: StereoMix
     let createdAt = Date()
 
-    init(key: String, processes: [AudioObjectID], outputUID: String, gain: Float, eq: EQSettings?) throws {
+    init(key: String, processes: [AudioObjectID], outputUID: String, gain: Float, eq: EQSettings?, mix: StereoMix) throws {
         self.key = key
         self.outputUID = outputUID
         self.processes = processes
         self.lastGain = gain
         self.lastEQ = eq
+        self.lastMix = mix
 
         let description = CATapDescription(stereoMixdownOfProcesses: processes)
         description.uuid = UUID()
@@ -70,7 +72,7 @@ final class AppTap {
         aggregateID = device
         let rate = CA.get(device, CA.address(kAudioDevicePropertyNominalSampleRate), as: Float64.self) ?? 48_000
         kernel = DSPKernel(sampleRate: rate)
-        kernel.update(gain: gain, eq: eq)
+        kernel.update(gain: gain, eq: eq, mix: mix)
 
         do {
             try check(status, "AudioHardwareCreateAggregateDevice")
@@ -96,11 +98,12 @@ final class AppTap {
         { _, input, _, output, _ in kernel.process(input: input, output: output) }
     }
 
-    func apply(gain: Float, eq: EQSettings?) {
-        guard gain != lastGain || eq != lastEQ else { return }
+    func apply(gain: Float, eq: EQSettings?, mix: StereoMix) {
+        guard gain != lastGain || eq != lastEQ || mix != lastMix else { return }
         lastGain = gain
         lastEQ = eq
-        kernel.update(gain: gain, eq: eq)
+        lastMix = mix
+        kernel.update(gain: gain, eq: eq, mix: mix)
     }
 
     /// Swaps the tapped process list in place (e.g. Chrome spawned a new renderer).

@@ -37,6 +37,9 @@ final class NowPlayingService {
 
     @ObservationIgnored private var process: Process?
     @ObservationIgnored private var restarts = 0
+    /// After play/pause, the state Tone already shows. media-control can report the
+    /// old state once more before the new one, which made the button flicker.
+    @ObservationIgnored private var expected: (id: String, playing: Bool, until: Date)?
 
     static let toolPaths = ["/opt/homebrew/bin/media-control", "/usr/local/bin/media-control"]
     var toolPath: String? { Self.toolPaths.first { FileManager.default.isExecutableFile(atPath: $0) } }
@@ -49,7 +52,7 @@ final class NowPlayingService {
         }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: toolPath)
-        process.arguments = ["stream", "--no-diff", "--debounce=150"]
+        process.arguments = ["stream", "--no-diff", "--debounce=50"]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
@@ -94,13 +97,14 @@ final class NowPlayingService {
         availability = .available
         restarts = 0
         guard let bundle = update.bundle else {
-            // Empty payload: nothing is playing any more.
-            sessions = sessions.map { var s = $0; s.isPlaying = false; s.isCurrent = false; return s }
+            // Empty payload: nothing is playing. The last player still takes play
+            // commands, so it stays current and its buttons stay enabled.
+            sessions = sessions.map { var s = $0; s.isPlaying = held(s.id, false); return s }
             pruneQuitApps()
             return
         }
         let session = NowPlayingSession(id: bundle, title: update.title, artist: update.artist, album: update.album,
-                                        artwork: update.artwork, isPlaying: update.playing, isCurrent: true)
+                                        artwork: update.artwork, isPlaying: held(bundle, update.playing), isCurrent: true)
 
         var next = sessions.map { var s = $0; s.isCurrent = false; if s.id != bundle { s.isPlaying = false }; return s }
         if let i = next.firstIndex(where: { $0.id == bundle }) {
@@ -110,6 +114,16 @@ final class NowPlayingService {
         }
         sessions = next
         pruneQuitApps()
+    }
+
+    /// The reported state, unless a recent play/pause from Tone hasn't shown up yet.
+    private func held(_ id: String, _ reported: Bool) -> Bool {
+        guard let expected, expected.id == id else { return reported }
+        if reported == expected.playing || Date() > expected.until {
+            self.expected = nil
+            return reported
+        }
+        return expected.playing
     }
 
     /// Older sessions stay listed (paused) until their app quits.
@@ -126,7 +140,10 @@ final class NowPlayingService {
 
     private func send(_ command: String, optimistic id: String?) {
         guard let toolPath else { return }
-        if let id, let i = sessions.firstIndex(where: { $0.id == id }) { sessions[i].isPlaying.toggle() }
+        if let id, let i = sessions.firstIndex(where: { $0.id == id }) {
+            sessions[i].isPlaying.toggle()
+            expected = (id, sessions[i].isPlaying, Date().addingTimeInterval(1.5))
+        }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: toolPath)
         process.arguments = [command]

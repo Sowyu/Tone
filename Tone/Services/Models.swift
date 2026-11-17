@@ -19,6 +19,15 @@ struct EQPreset: Codable, Identifiable, Equatable, Sendable {
     var eq: EQSettings
 }
 
+/// Balance and headphone crossfeed. Neutral is centred with crossfeed off.
+struct StereoMix: Equatable, Sendable {
+    /// -1 is fully left, 1 fully right.
+    var balance: Float = 0
+    /// 0 is off, 1 is the strongest blend.
+    var crossfeed: Float = 0
+    var isNeutral: Bool { abs(balance) < 0.005 && crossfeed < 0.005 }
+}
+
 /// Everything Tone remembers about one app, keyed by bundle ID.
 struct AppAudioSettings: Codable, Equatable, Sendable {
     /// 0 up to the maximum app volume (at most 5), where 1 is 100%.
@@ -26,6 +35,23 @@ struct AppAudioSettings: Codable, Equatable, Sendable {
     var eqEnabled = false
     var eq = EQSettings.flat
     var presetName = "Flat"
+    var balance: Double = 0
+    var crossfeed: Double = 0
+
+    var mix: StereoMix { StereoMix(balance: Float(balance), crossfeed: Float(crossfeed)) }
+
+    init() {}
+
+    /// Fields added after 1.0 are optional so older saved settings still load.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        volume = try c.decodeIfPresent(Double.self, forKey: .volume) ?? 1
+        eqEnabled = try c.decodeIfPresent(Bool.self, forKey: .eqEnabled) ?? false
+        eq = try c.decodeIfPresent(EQSettings.self, forKey: .eq) ?? .flat
+        presetName = try c.decodeIfPresent(String.self, forKey: .presetName) ?? "Flat"
+        balance = try c.decodeIfPresent(Double.self, forKey: .balance) ?? 0
+        crossfeed = try c.decodeIfPresent(Double.self, forKey: .crossfeed) ?? 0
+    }
 
     /// Linear gain for the DSP. Square law below 100% so the slider feels even;
     /// linear above it so 200% is +6 dB.

@@ -73,7 +73,7 @@ final class AppModel {
 
         let requests = apps.values.map { app -> TapRequest in
             let s = store.settings(for: app.id)
-            return TapRequest(app: app, gain: s.gain, eq: s.eqEnabled ? s.eq : nil)
+            return TapRequest(app: app, gain: s.gain, eq: s.eqEnabled ? s.eq : nil, mix: s.mix)
         }
         if requests.contains(where: { !$0.isNeutral }) { requestPermissionIfNeeded() }
         engine.sync(requests, allowTapping: canTap)
@@ -87,6 +87,8 @@ final class AppModel {
     var applicationKeys: [String] {
         let state = store.state
         var keys = Set(processes.apps.values.filter { everPlayed.contains($0.id) || $0.isPlaying }.map(\.id))
+        // A paused player shows in Now Playing before it has played since Tone launched.
+        keys.formUnion(nowPlaying.sessions.map(\.id))
         keys.formUnion(state.pinned)
         keys.subtract(state.hidden)
         return SettingsStore.ordered(keys.sorted { displayName($0).localizedCompare(displayName($1)) == .orderedAscending },
@@ -122,6 +124,16 @@ final class AppModel {
 
     func setVolume(_ key: String, _ volume: Double) {
         store.update(key) { $0.volume = min(max(volume, 0), overdriveLimit) }
+        syncEngine()
+    }
+
+    func setBalance(_ key: String, _ balance: Double) {
+        store.update(key) { $0.balance = min(max(balance, -1), 1) }
+        syncEngine()
+    }
+
+    func setCrossfeed(_ key: String, _ amount: Double) {
+        store.update(key) { $0.crossfeed = min(max(amount, 0), 1) }
         syncEngine()
     }
 

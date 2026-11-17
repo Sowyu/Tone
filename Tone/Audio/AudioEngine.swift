@@ -7,7 +7,8 @@ struct TapRequest {
     let app: AudioApp
     let gain: Float
     let eq: EQSettings?
-    var isNeutral: Bool { abs(gain - 1) < 0.0005 && eq == nil }
+    let mix: StereoMix
+    var isNeutral: Bool { abs(gain - 1) < 0.0005 && eq == nil && mix.isNeutral }
 }
 
 /// Owns every AppTap. Main thread only.
@@ -47,7 +48,7 @@ final class AudioEngine {
         for (key, tap) in old {
             do {
                 taps[key] = try AppTap(key: key, processes: tap.processes, outputUID: uid,
-                                       gain: tap.lastGain, eq: tap.lastEQ)
+                                       gain: tap.lastGain, eq: tap.lastEQ, mix: tap.lastMix)
             } catch {
                 record(error, key)
             }
@@ -89,12 +90,12 @@ final class AudioEngine {
                 }
                 do {
                     try tap.updateProcesses(request.app.processObjects)
-                    tap.apply(gain: request.gain, eq: request.eq)
+                    tap.apply(gain: request.gain, eq: request.eq, mix: request.mix)
                 } catch {
                     // Couldn't edit the tap in place: rebuild it.
                     record(error, key)
                     if let fresh = try? AppTap(key: key, processes: request.app.processObjects, outputUID: outputUID,
-                                               gain: request.gain, eq: request.eq) {
+                                               gain: request.gain, eq: request.eq, mix: request.mix) {
                         taps[key] = fresh
                     } else {
                         taps[key] = nil
@@ -104,7 +105,7 @@ final class AudioEngine {
             } else if !request.isNeutral, allowTapping {
                 do {
                     taps[key] = try AppTap(key: key, processes: request.app.processObjects, outputUID: outputUID,
-                                           gain: request.gain, eq: request.eq)
+                                           gain: request.gain, eq: request.eq, mix: request.mix)
                     Self.log.info("Tapped \(key, privacy: .public)")
                     syncLater(3.5)
                 } catch {
