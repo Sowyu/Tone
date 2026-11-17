@@ -9,6 +9,8 @@ struct BatteryLevel: Equatable, Sendable {
     var left: Int?
     var right: Int?
     var main: Int?
+    /// The AirPods case, while the system has a reading for it.
+    var caseLevel: Int?
 
     /// Earbuds report per bud; the menu shows the lower one.
     var buds: Int? {
@@ -123,7 +125,8 @@ final class BluetoothAudio {
         }
         let headset = PrivateBT.int(device, "headsetBattery").flatMap { $0 > 0 && $0 <= 100 ? $0 : nil }
         let battery = BatteryLevel(left: pct("batteryPercentLeft"), right: pct("batteryPercentRight"),
-                                   main: pct("batteryPercentSingle") ?? pct("batteryPercentCombined") ?? headset)
+                                   main: pct("batteryPercentSingle") ?? pct("batteryPercentCombined") ?? headset,
+                                   caseLevel: pct("batteryPercentCase"))
         let airPods = PrivateBT.bool(device, "isANCSupported") == true || PrivateBT.bool(device, "isTransparencySupported") == true
         let model = PrivateBT.uint16(device, "productID") ?? 0
         return BluetoothDetails(battery: battery.shown == nil ? nil : battery,
@@ -172,18 +175,20 @@ final class BluetoothAudio {
         for source in list {
             guard let d = IOPSGetPowerSourceDescription(info, source)?.takeUnretainedValue() as? [String: Any],
                   d[kIOPSTypeKey] as? String == "Accessory Source", d[kIOPSIsPresentKey] as? Bool != false,
-                  let name = d[kIOPSNameKey] as? String,
+                  var name = d[kIOPSNameKey] as? String,
                   let now = d[kIOPSCurrentCapacityKey] as? Int, let max = d[kIOPSMaxCapacityKey] as? Int, max > 0
             else { continue }
             let pct = now * 100 / max
+            // The case is listed as "<AirPods name> Case".
+            if d["Part Identifier"] as? String == "Case", name.hasSuffix(" Case") { name.removeLast(5) }
             var level = result[name] ?? BatteryLevel()
             switch d["Part Identifier"] as? String {
             case "Left": level.left = pct
             case "Right": level.right = pct
-            case "Case": break
+            case "Case": level.caseLevel = pct
             default: level.main = pct
             }
-            if level.shown != nil { result[name] = level }
+            if level.shown != nil || level.caseLevel != nil { result[name] = level }
         }
         return result
     }

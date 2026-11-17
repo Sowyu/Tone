@@ -160,7 +160,7 @@ struct OutputList: View {
         ForEach(model.bluetooth.disconnected) { paired in
             DeviceRow(id: "bt:\(paired.id)", name: paired.name, symbol: paired.symbol, selected: false,
                       trailing: model.bluetooth.connecting.contains(paired.id) ? "Connecting…" : nil,
-                      battery: model.bluetooth.battery(forName: paired.name)?.shown) {
+                      battery: model.bluetooth.battery(forName: paired.name)) {
                 model.bluetooth.connect(paired, devices: model.devices)
             }
         }
@@ -185,7 +185,7 @@ private struct OutputItem: View {
 
     var body: some View {
         DeviceRow(id: "out:\(device.uid)", name: device.name, symbol: details?.symbol ?? device.symbol, selected: selected,
-                  trailing: nil, battery: model.bluetooth.battery(forName: device.name, details: details)?.shown,
+                  trailing: nil, battery: model.bluetooth.battery(forName: device.name, details: details),
                   chevron: hasSection ? expanded : nil,
                   expand: expandAction, action: activate)
             .background(expanded ? Color.primary.opacity(0.04) : .clear)
@@ -221,15 +221,15 @@ struct InputList: View {
 }
 
 /// The system Sound menu's device row: the device's glyph in a 26 pt circle,
-/// accent when selected. AirPods show their battery under the name with one bud,
-/// other devices on the right with a battery gauge.
+/// accent when selected. AirPods show each bud and the case under the name,
+/// other devices show one level on the right with a battery gauge.
 struct DeviceRow: View {
     let id: String
     let name: String
     let symbol: String
     let selected: Bool
     let trailing: String?
-    var battery: Int? = nil
+    var battery: BatteryLevel? = nil
     /// nil for no chevron, otherwise whether it points down.
     var chevron: Bool?
     var expand: (@MainActor (Bool) -> Void)?
@@ -238,15 +238,19 @@ struct DeviceRow: View {
     private var budGlyph: String? { Self.budGlyph(for: symbol) }
 
     var body: some View {
-        let under = budGlyph.flatMap { glyph in battery.map { (glyph, $0) } }
+        let under = budGlyph == nil ? [] : budParts
         HStack(spacing: 8) {
             DeviceCircle(symbol: symbol, selected: selected)
             VStack(alignment: .leading, spacing: 1) {
                 Text(name).lineLimit(1).truncationMode(.tail)
-                if let (glyph, level) = under {
-                    HStack(spacing: 3) {
-                        Image(systemName: glyph).symbolRenderingMode(.hierarchical)
-                        Text("\(level)%").monospacedDigit()
+                if !under.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(under, id: \.glyph) { part in
+                            HStack(spacing: 3) {
+                                Image(systemName: part.glyph).symbolRenderingMode(.hierarchical)
+                                Text("\(part.level)%").monospacedDigit()
+                            }
+                        }
                     }
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
@@ -255,7 +259,7 @@ struct DeviceRow: View {
             Spacer(minLength: 6)
             if let trailing {
                 Text(trailing).monospacedDigit().foregroundStyle(.secondary).lineLimit(1).fixedSize()
-            } else if budGlyph == nil, let battery {
+            } else if budGlyph == nil, let battery = battery?.shown {
                 HStack(spacing: 5) {
                     Text("\(battery)%").monospacedDigit().foregroundStyle(.secondary)
                     BatteryGauge(level: battery)
@@ -270,9 +274,31 @@ struct DeviceRow: View {
                     .rotationEffect(.degrees(chevron ? 90 : 0))
             }
         }
-        .padding(.vertical, under == nil ? 0 : 3)
+        .padding(.vertical, under.isEmpty ? 0 : 3)
         .menuRow(id, height: Metrics.deviceRowHeight, expand: expand, action: action)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// Left bud, right bud and case, each with its own glyph like the system menu.
+    /// Buds at the same level share one glyph of both buds.
+    private var budParts: [(glyph: String, level: Int)] {
+        guard let battery, let right = budGlyph else { return [] }
+        var parts: [(glyph: String, level: Int)] = []
+        switch (battery.left, battery.right) {
+        case let (l?, r?) where l == r: parts.append((symbol, l))
+        case let (l, r):
+            if let l { parts.append((Self.glyph(symbol + ".left", fallback: right.replacingOccurrences(of: ".right", with: ".left")), l)) }
+            if let r { parts.append((right, r)) }
+        }
+        if parts.isEmpty, let main = battery.main { parts.append((right, main)) }
+        if let c = battery.caseLevel {
+            parts.append((Self.glyph(symbol + ".chargingcase.wireless.fill", fallback: "airpods.chargingcase.wireless.fill"), c))
+        }
+        return parts
+    }
+
+    private static func glyph(_ name: String, fallback: String) -> String {
+        NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil ? name : fallback
     }
 
     /// One bud of the same AirPods, as the system menu draws it. nil for anything else.
