@@ -56,6 +56,10 @@ final class AudioEngine {
     }
 
     /// Brings the taps in line with the requests. Apps not in `requests` lose their tap.
+    /// True while Tone taps this app. A tapped app's own output reads as idle to
+    /// Core Audio, because its audio now plays through Tone's tap.
+    func isTapped(_ key: String) -> Bool { taps[key] != nil }
+
     func sync(_ requests: [TapRequest], allowTapping: Bool) {
         let wanted = Dictionary(requests.map { ($0.app.id, $0) }, uniquingKeysWith: { a, _ in a })
         for (key, tap) in taps where wanted[key] == nil {

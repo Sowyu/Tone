@@ -72,6 +72,7 @@ final class AppModel {
             return TapRequest(app: app, gain: s.gain, eq: s.eqEnabled ? s.eq : nil)
         }
         engine.sync(requests, allowTapping: canTap)
+        for app in apps.values where engine.isTapped(app.id) { everPlayed.insert(app.id) }
     }
 
     // MARK: Applications
