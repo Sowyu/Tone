@@ -42,7 +42,7 @@ make install
 
 ## Credits
 
-The design is based on Jace's sound mixer concept (JaceThings on X): https://x.com/JaceThings/status/2105247096916099505. I'm not affiliated with Jace, I just loved the idea and built it.
+The design is based on Jace's sound mixer concept (JaceThings on X): https://x.com/JaceThings/status/2105247096916099505. Tone isn't affiliated with Jace in any way.
 
 ## Known limits
 
