@@ -42,28 +42,36 @@ struct SettingsView: View {
                     }
                 }
                 SettingsRow(title: "Menu bar icon") {
-                    Picker("Menu bar icon", selection: $store.state.iconStyle) {
-                        ForEach(MenuBarIconStyle.allCases) { style in
-                            Label(style.title, systemImage: style.symbol).tag(style)
+                    Menu {
+                        Picker("Menu bar icon", selection: $store.state.iconStyle) {
+                            ForEach(MenuBarIconStyle.allCases) { style in
+                                Label(style.title, systemImage: style.symbol).tag(style)
+                            }
                         }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                    } label: {
+                        Label(store.state.iconStyle.title, systemImage: store.state.iconStyle.symbol)
                     }
-                    .labelsHidden()
+                    .settingsPicker()
                 }
             }
 
             SettingsSection(title: "Volume", symbol: "speaker.wave.2.fill") {
                 SettingsRow(title: "Maximum app volume",
                             detail: "Above 100%, Tone limits peaks so the boosted sound doesn't distort.") {
-                    Picker("Maximum app volume", selection: $store.state.overdriveLimit) {
-                        Text("100%").tag(1.0)
-                        Text("125%").tag(1.25)
-                        Text("150%").tag(1.5)
-                        Text("200%").tag(2.0)
-                        Text("300%").tag(3.0)
-                        Text("400%").tag(4.0)
-                        Text("500%").tag(5.0)
+                    Menu {
+                        Picker("Maximum app volume", selection: $store.state.overdriveLimit) {
+                            ForEach([1.0, 1.25, 1.5, 2, 3, 4, 5], id: \.self) { limit in
+                                Text("\(Int(limit * 100))%").tag(limit)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                    } label: {
+                        Text("\(Int(store.state.overdriveLimit * 100))%").monospacedDigit()
                     }
-                    .labelsHidden()
+                    .settingsPicker()
                 }
             }
 
@@ -154,7 +162,7 @@ struct SettingsView: View {
         .padding(.bottom, 24)
         .frame(width: 520)
         .fixedSize(horizontal: false, vertical: true)
-        .background(Color(nsColor: SettingsStyle.background))
+        .modifier(SettingsBackground())
         .onAppear { model.permission.refresh() }
     }
 
@@ -163,6 +171,17 @@ struct SettingsView: View {
         case .available, .starting: nil
         case .missingTool: "Install media-control with Homebrew, then reopen Tone."
         case .failed(let reason): reason
+        }
+    }
+}
+
+/// Glass on macOS 26 and later, VectorScroll's solid color before.
+private struct SettingsBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content.background(GlassBackground().ignoresSafeArea())
+        } else {
+            content.background(Color(nsColor: SettingsStyle.background))
         }
     }
 }

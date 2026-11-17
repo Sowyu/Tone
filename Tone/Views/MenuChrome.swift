@@ -191,7 +191,7 @@ struct PanelSurface: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: Metrics.cornerRadius, style: .continuous)
         if #available(macOS 26, *) {
-            content.background(MenuGlass())
+            content.background(GlassBackground(cornerRadius: Metrics.cornerRadius))
         } else {
             content
                 .background(MenuMaterial().clipShape(shape).shadow(color: .black.opacity(0.3), radius: 18, y: 10))
@@ -201,10 +201,12 @@ struct PanelSurface: ViewModifier {
 }
 
 @available(macOS 26, *)
-private struct MenuGlass: NSViewRepresentable {
+struct GlassBackground: NSViewRepresentable {
+    var cornerRadius: CGFloat = 0
+
     func makeNSView(context: Context) -> NSGlassEffectView {
         let view = NSGlassEffectView()
-        view.cornerRadius = Metrics.cornerRadius
+        view.cornerRadius = cornerRadius
         view.style = .regular
         return view
     }

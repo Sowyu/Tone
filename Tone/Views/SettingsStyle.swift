@@ -30,8 +30,14 @@ enum SettingsStyle {
         // No visible title bar. The title stays for the Window menu and VoiceOver.
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
-        window.isOpaque = true
-        window.backgroundColor = background
+        if #available(macOS 26, *) {
+            // Liquid Glass: the window is clear and SettingsView draws a glass pane.
+            window.isOpaque = false
+            window.backgroundColor = .clear
+        } else {
+            window.isOpaque = true
+            window.backgroundColor = background
+        }
     }
 }
 
@@ -83,7 +89,7 @@ struct SettingsSection<Content: View>: View {
             }
             .padding(.horizontal, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(nsColor: SettingsStyle.groupFill), in: .rect(cornerRadius: 10))
+            .background(Color.primary.opacity(0.06), in: .rect(cornerRadius: 14, style: .continuous))
         }
     }
 }
@@ -118,6 +124,16 @@ struct SettingsFootnote: View {
 }
 
 extension View {
+    /// Pop-up menus as Liquid Glass capsules on macOS 26 and later.
+    @ViewBuilder func settingsPicker() -> some View {
+        let menu = menuStyle(.button).menuIndicator(.visible).fixedSize()
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) { menu.buttonStyle(.glass) } else { menu.buttonStyle(.bordered) }
+        #else
+        menu.buttonStyle(.bordered)
+        #endif
+    }
+
     /// VectorScroll's action button: medium weight, leading symbol, glass on macOS 26 and later.
     @ViewBuilder func settingsAction() -> some View {
         let styled = font(.system(size: 13, weight: .medium)).labelStyle(.titleAndIcon)
