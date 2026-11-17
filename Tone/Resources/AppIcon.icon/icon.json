@@ -1,27 +1,54 @@
 {
-  "fill" : {
-    "solid" : "srgb:0.07000,0.07000,0.08000,1.00000"
+  "fill": {
+    "solid": "srgb:0.07000,0.07000,0.08000,1.00000"
   },
-  "groups" : [
+  "groups": [
     {
-      "layers" : [
-        { "glass" : true, "image-name" : "knob1.svg", "name" : "knob1" },
-        { "glass" : true, "image-name" : "knob2.svg", "name" : "knob2" },
-        { "glass" : true, "image-name" : "knob3.svg", "name" : "knob3" }
+      "layers": [
+        {
+          "glass": true,
+          "image-name": "knob1.svg",
+          "name": "knob1"
+        },
+        {
+          "glass": true,
+          "image-name": "knob2.svg",
+          "name": "knob2"
+        },
+        {
+          "glass": true,
+          "image-name": "knob3.svg",
+          "name": "knob3"
+        }
       ],
-      "lighting" : "individual",
-      "shadow" : { "kind" : "neutral", "opacity" : 0.5 },
-      "specular" : true,
-      "translucency" : { "enabled" : true, "value" : 0.5 }
+      "lighting": "individual",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.6
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": true,
+        "value": 0.85
+      },
+      "blur-material": 0.35
     },
     {
-      "layers" : [
-        { "glass" : false, "image-name" : "tracks.svg", "name" : "tracks", "opacity" : 0.35 }
+      "layers": [
+        {
+          "glass": false,
+          "image-name": "tracks.svg",
+          "name": "tracks",
+          "opacity": 0.6
+        }
       ],
-      "shadow" : { "kind" : "none", "opacity" : 0 }
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      }
     }
   ],
-  "supported-platforms" : {
-    "squares" : "shared"
+  "supported-platforms": {
+    "squares": "shared"
   }
 }
