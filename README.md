@@ -1,6 +1,23 @@
-# Tone
+<p align="center">
+  <img src="docs/icon.png" width="128" alt="Tone icon">
+</p>
 
-Tone is a per-app volume mixer and equalizer that lives in the macOS menu bar. Click the icon and a panel shows the output volume, output and input devices, what's playing, and every app making sound. Each app gets its own volume from 0 to 200% and its own 10-band EQ.
+<h1 align="center">Tone</h1>
+
+<p align="center">Per-app volume and EQ for the macOS menu bar.</p>
+
+<p align="center">
+  <img src="docs/panel.png" width="340" alt="Tone's menu bar panel">
+</p>
+
+Tone is a per-app volume mixer and equalizer that lives in the macOS menu bar. Click the icon and a panel shows the output volume, output and input devices, what's playing, and every app making sound.
+
+- Set each app's volume from 0 to 200%.
+- Give each app its own 10-band EQ with presets.
+- Switch output and input devices, and connect paired Bluetooth headphones.
+- See AirPods battery before they connect, and change Listening Mode and Conversation Awareness.
+- Play, pause and skip what's playing.
+- Change the output volume.
 
 Tone is a native Swift 6 and SwiftUI app. It installs no audio driver, HAL plug-in or kext. Per-app audio goes through Core Audio process taps, which macOS has offered since 14.2.
 
