@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Alerts show NSApp's icon, which comes back blank for this menu bar app; read it from the bundle.
+        NSApp.applicationIconImage = NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
         model = AppModel()
         panel = PanelController(model: model) { [weak self] in self?.showSettings() }
         if Diagnostics.shared.enabled { addDebugHooks() }
