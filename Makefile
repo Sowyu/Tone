@@ -47,6 +47,7 @@ sign: build
 
 install: sign
 	-@pkill -x $(APP_NAME) && sleep 0.5 || true
+	rm -rf $(INSTALL_APP)
 	ditto $(PRODUCT) $(INSTALL_APP)
 	@$(MAKE) --no-print-directory verify
 	open $(INSTALL_APP)

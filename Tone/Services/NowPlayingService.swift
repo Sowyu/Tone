@@ -154,9 +154,12 @@ final class NowPlayingService {
     }
 
     /// Older sessions stay listed (paused) until their app quits.
-    func pruneQuitApps() {
+    /// `quit` is dropped even if it was current: a player that clears its info while
+    /// quitting is still running then, and the adapter won't repeat the empty payload.
+    func pruneQuitApps(quit: String? = nil) {
         let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
-        let kept = sessions.filter { $0.isCurrent || running.contains($0.id) }
+        let kept = sessions.filter { $0.id != quit && ($0.isCurrent || running.contains($0.id)) }
+        reported = reported.filter { id, _ in kept.contains { $0.id == id } }
         if kept != sessions { sessions = kept }
     }
 

@@ -33,8 +33,9 @@ final class AppModel {
         // for release or a new tap needs its health check.
         engine.onNeedsSync = { [weak self] in self?.healthCheck() }
         observers.append(NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.nowPlaying.pruneQuitApps() }
+            forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { [weak self] note in
+            let quit = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+            MainActor.assumeIsolated { self?.nowPlaying.pruneQuitApps(quit: quit) }
         })
         Diagnostics.shared.attach(self)
         #if DEBUG
