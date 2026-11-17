@@ -21,7 +21,6 @@ There's no drivers or kernel extensions, instead Tone just uses what macOS provi
 ## Requirements
 
 - macOS 15 or later, tested on macOS 27
-- Optional: `brew install media-control` for the Now Playing section
 
 ## Install
 
@@ -30,7 +29,7 @@ There's no drivers or kernel extensions, instead Tone just uses what macOS provi
 3. Open Tone from Applications. macOS will say it can't check Tone for malware, because Tone isn't notarized by Apple, so click Done.
 4. Go to System Settings > Privacy & Security, scroll down and click Open Anyway next to the message about Tone, then confirm.
 
-You only have to do that once, and after that Tone updates itself from inside the app. If you want Now Playing, run `brew install media-control` too.
+You only have to do that once, and after that Tone updates itself from inside the app.
 
 ## Permissions
 
@@ -63,9 +62,10 @@ The release has to be signed with the same "Tone Local Signing" certificate ever
 
 The design is based on Jace's sound mixer concept ([JaceThings on X](https://x.com/JaceThings/status/2105247096916099505)). Tone isn't affiliated with Jace.
 
+Now Playing uses [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) by Jonas van den Berg, bundled under the BSD 3-Clause License.
+
 ## Known limitations
 
-- Now Playing needs `media-control` installed
 - Spatial Audio isn't available
 - Battery for non-Apple headphones only shows while connected
 

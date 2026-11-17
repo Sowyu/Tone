@@ -23,11 +23,11 @@ struct NowPlayingSession: Identifiable, Equatable {
 /// Now Playing info.
 ///
 /// macOS 15.4+ only lets Apple-entitled processes read MediaRemote, and there is
-/// no public API to read other apps' sessions. Tone therefore talks to the
-/// open-source `media-control` tool (brew install media-control), which reaches
-/// MediaRemote through an Apple-signed host process. All of that is isolated in
-/// this file. If the tool is missing or stops working, the section shows a hint
-/// and the rest of Tone is unaffected.
+/// no public API to read other apps' sessions. Tone bundles the open-source
+/// mediaremote-adapter (Vendor/mediaremote-adapter): Apple-signed /usr/bin/perl is
+/// allowed to read MediaRemote, and the bundled script loads the adapter framework
+/// into it. All of that is isolated in this file. If it stops working, the section
+/// is left out and the rest of Tone is unaffected.
 @MainActor @Observable
 final class NowPlayingService {
     enum Availability: Equatable { case starting, available, missingTool, failed(String) }
@@ -37,22 +37,32 @@ final class NowPlayingService {
 
     @ObservationIgnored private var process: Process?
     @ObservationIgnored private var restarts = 0
-    /// After play/pause, the state Tone already shows. media-control can report the
+    /// After play/pause, the state Tone already shows. the adapter can report the
     /// old state once more before the new one, which made the button flicker.
     @ObservationIgnored private var expected: (id: String, playing: Bool, until: Date)?
 
-    static let toolPaths = ["/opt/homebrew/bin/media-control", "/usr/local/bin/media-control"]
-    var toolPath: String? { Self.toolPaths.first { FileManager.default.isExecutableFile(atPath: $0) } }
+    /// The bundled script and framework, run as `perl script framework function args…`.
+    private static let adapter: [String]? = {
+        guard let script = Bundle.main.path(forResource: "mediaremote-adapter", ofType: "pl"),
+              let framework = Bundle.main.privateFrameworksURL?.appendingPathComponent("MediaRemoteAdapter.framework").path,
+              FileManager.default.fileExists(atPath: framework) else { return nil }
+        return [script, framework]
+    }()
+
+    private static func adapterProcess(_ arguments: [String]) -> Process? {
+        guard let adapter else { return nil }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
+        process.arguments = adapter + arguments
+        return process
+    }
 
     func start() {
         guard process == nil else { return }
-        guard let toolPath else {
+        guard let process = Self.adapterProcess(["stream", "--no-diff", "--debounce=50"]) else {
             availability = .missingTool
             return
         }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: toolPath)
-        process.arguments = ["stream", "--no-diff", "--debounce=50"]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
@@ -85,7 +95,7 @@ final class NowPlayingService {
         process = nil
         restarts += 1
         guard restarts < 5 else {
-            availability = .failed("media-control keeps exiting")
+            availability = .failed("the Now Playing reader keeps exiting")
             return
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
@@ -135,18 +145,18 @@ final class NowPlayingService {
 
     // MARK: Commands
 
-    func togglePlayPause(_ session: NowPlayingSession) { send(session.isPlaying ? "pause" : "play", optimistic: session.id) }
-    func next(_ session: NowPlayingSession) { send("next-track", optimistic: nil) }
+    /// MediaRemote command IDs.
+    private enum Command: Int { case play = 0, pause = 1, nextTrack = 4 }
 
-    private func send(_ command: String, optimistic id: String?) {
-        guard let toolPath else { return }
+    func togglePlayPause(_ session: NowPlayingSession) { send(session.isPlaying ? .pause : .play, optimistic: session.id) }
+    func next(_ session: NowPlayingSession) { send(.nextTrack, optimistic: nil) }
+
+    private func send(_ command: Command, optimistic id: String?) {
+        guard let process = Self.adapterProcess(["send", String(command.rawValue)]) else { return }
         if let id, let i = sessions.firstIndex(where: { $0.id == id }) {
             sessions[i].isPlaying.toggle()
             expected = (id, sessions[i].isPlaying, Date().addingTimeInterval(1.5))
         }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: toolPath)
-        process.arguments = [command]
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try? process.run()
@@ -160,7 +170,7 @@ struct NowPlayingUpdate: @unchecked Sendable {
     var playing = false
 }
 
-/// Splits the media-control stream into lines and decodes them. Used only from
+/// Splits the adapter's stream into lines and decodes them. Used only from
 /// the pipe's readability queue, which delivers serially.
 final class NowPlayingDecoder: @unchecked Sendable {
     private var buffer = Data()

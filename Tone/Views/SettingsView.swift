@@ -170,7 +170,7 @@ struct SettingsView: View {
     private var nowPlayingDetail: String? {
         switch model.nowPlaying.availability {
         case .available, .starting: nil
-        case .missingTool: "Install media-control with Homebrew, then reopen Tone."
+        case .missingTool: "Tone's Now Playing reader is missing. Download Tone again to fix it."
         case .failed(let reason): reason
         }
     }

@@ -47,7 +47,7 @@ struct PanelContent: View {
     @Environment(AppModel.self) private var model
     @Environment(PanelState.self) private var panel
 
-    /// Without media-control the section is left out; Settings explains how to get it.
+    /// If the Now Playing reader fails the section is left out; Settings says why.
     private var showsNowPlaying: Bool {
         switch model.nowPlaying.availability {
         case .starting, .available: true

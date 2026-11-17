@@ -18,6 +18,15 @@ targets:
     platform: macOS
     sources:
       - path: Tone
+      - path: Vendor/mediaremote-adapter/bin/mediaremote-adapter.pl
+        buildPhase: resources
+      # BSD-3-Clause asks for the license to ship with the binary.
+      - path: Vendor/mediaremote-adapter/LICENSE
+        buildPhase: resources
+    dependencies:
+      - target: MediaRemoteAdapter
+        embed: true
+        link: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.sowyu.tone
@@ -29,3 +38,28 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_STRICT_CONCURRENCY: complete
         DEAD_CODE_STRIPPING: YES
+
+  # Now Playing reader, built from vendored source (BSD-3-Clause, see Vendor/mediaremote-adapter/LICENSE).
+  # Apple-signed /usr/bin/perl may read MediaRemote, so Tone runs the bundled script
+  # with perl and the script loads this framework into it.
+  MediaRemoteAdapter:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Vendor/mediaremote-adapter/src
+      - path: Vendor/mediaremote-adapter/include
+        headerVisibility: public
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sowyu.tone.MediaRemoteAdapter
+        PRODUCT_NAME: MediaRemoteAdapter
+        GENERATE_INFOPLIST_FILE: YES
+        CLANG_ENABLE_OBJC_ARC: YES
+        # perl looks the adapter's functions up by name.
+        GCC_SYMBOLS_PRIVATE_EXTERN: NO
+        DEFINES_MODULE: NO
+        SKIP_INSTALL: YES
+        HEADER_SEARCH_PATHS: $(SRCROOT)/Vendor/mediaremote-adapter/src $(SRCROOT)/Vendor/mediaremote-adapter/include
+        OTHER_LDFLAGS: -framework AppKit -framework UniformTypeIdentifiers
+        CLANG_WARN_STRICT_PROTOTYPES: NO
+        GCC_WARN_INHIBIT_ALL_WARNINGS: YES

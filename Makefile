@@ -37,7 +37,10 @@ sign: build
 	@HASH=$$(security find-certificate -c "$(IDENTITY)" -Z | awk '/SHA-1/{print $$3}'); \
 	test -n "$$HASH" || { echo "Identity '$(IDENTITY)' not found. Run: make identity"; exit 1; }; \
 	echo "designated => identifier \"$(BUNDLE_ID)\" and certificate leaf = H\"$$HASH\"" > $(BUILD_DIR)/requirement.txt; \
-	codesign --force --deep --options runtime --timestamp=none \
+	for f in $(PRODUCT)/Contents/Frameworks/*.framework; do \
+		codesign --force --options runtime --timestamp=none -s "$(IDENTITY)" "$$f" || exit 1; \
+	done; \
+	codesign --force --options runtime --timestamp=none \
 		--entitlements $(ENTITLEMENTS) \
 		--requirements "=$$(cat $(BUILD_DIR)/requirement.txt)" \
 		-s "$(IDENTITY)" $(PRODUCT)
