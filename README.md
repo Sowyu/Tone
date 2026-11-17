@@ -23,6 +23,15 @@ There's no drivers or kernel extensions, instead Tone just uses what macOS provi
 - macOS 15 or later, tested on macOS 27
 - Optional: `brew install media-control` for the Now Playing section
 
+## Install
+
+1. Download `Tone.dmg` from the [latest release](https://github.com/Sowyu/Tone/releases/latest).
+2. Open it and drag Tone into Applications.
+3. Open Tone from Applications. macOS will say it can't check Tone for malware, because Tone isn't notarized by Apple, so click Done.
+4. Go to System Settings > Privacy & Security, scroll down and click Open Anyway next to the message about Tone, then confirm.
+
+You only have to do that once, and after that Tone updates itself from inside the app. If you want Now Playing, run `brew install media-control` too.
+
 ## Permissions
 
 The first time you change a volume or EQ, macOS asks to allow system audio recording. The audio never leaves your Mac. Tone also asks for Bluetooth access so it can read battery levels and control AirPods.
