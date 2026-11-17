@@ -14,9 +14,9 @@
 		2BD33A5957007A36ED4FA664 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E22F670B162357A0367306 /* Models.swift */; };
 		41B0EFF43978800F7F2F4675 /* ToneApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5930DF088187B3E202C44CA2 /* ToneApp.swift */; };
 		4D2FD0561B35C8A9AD16EB16 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7CBDBA0450A640395E56066 /* AppModel.swift */; };
-		4FEFE0DC1AA38C556DDABDD5 /* ProximityBattery.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91CA5ED0843D2DDE864844E /* ProximityBattery.swift */; };
 		53A71209E40CEA79D882DA1D /* CapturePermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 544986FFBCC04218DAE7A702 /* CapturePermission.swift */; };
 		68B7503F66B88D6B681C6ED7 /* AppTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F9C3645F36384E001CC14AF /* AppTap.swift */; };
+		6F33CD4659A30612D91F3F9A /* AirPodsLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C271979BF18BFE27B13D96A /* AirPodsLink.swift */; };
 		849E32C87FD4293F771FD0D2 /* CoreAudioHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C13C1451C053FF07E75DF7 /* CoreAudioHelpers.swift */; };
 		85D2BDBEED79FBE4A645ABFB /* BluetoothAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */; };
 		89198E567D1456C3C64C375D /* PresetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2CE59D657ABB101D11E2DC /* PresetStore.swift */; };
@@ -36,6 +36,7 @@
 		185EE181F51042E37EE4ED36 /* MenuChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuChrome.swift; sourceTree = "<group>"; };
 		1A3A515151EF48EF8C3EAD14 /* AppRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRows.swift; sourceTree = "<group>"; };
 		1B1A2DD6269A31B9E8E65BB7 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
+		2C271979BF18BFE27B13D96A /* AirPodsLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPodsLink.swift; sourceTree = "<group>"; };
 		390F5DB02E3299738531A9DA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		3EF52BB07AD075A8A76A8388 /* EQPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EQPanel.swift; sourceTree = "<group>"; };
 		40E22F670B162357A0367306 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -51,7 +52,6 @@
 		8DC86D0145E94528DDEE74CC /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
 		B40C108BA922BA404F1AE608 /* PanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelView.swift; sourceTree = "<group>"; };
 		C6008A5584013B1828B22A76 /* Tone.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Tone.xcconfig; sourceTree = "<group>"; };
-		C91CA5ED0843D2DDE864844E /* ProximityBattery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximityBattery.swift; sourceTree = "<group>"; };
 		CD49804B183AAE4F18CD66B3 /* ProcessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessMonitor.swift; sourceTree = "<group>"; };
 		D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothAudio.swift; sourceTree = "<group>"; };
 		DF920145CE6D8865F9540019 /* NowPlayingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingService.swift; sourceTree = "<group>"; };
@@ -91,13 +91,13 @@
 		9F11E711AE26CA8BDDD83D52 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				2C271979BF18BFE27B13D96A /* AirPodsLink.swift */,
 				F7CBDBA0450A640395E56066 /* AppModel.swift */,
 				D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */,
 				8DC86D0145E94528DDEE74CC /* Diagnostics.swift */,
 				40E22F670B162357A0367306 /* Models.swift */,
 				DF920145CE6D8865F9540019 /* NowPlayingService.swift */,
 				FD2CE59D657ABB101D11E2DC /* PresetStore.swift */,
-				C91CA5ED0843D2DDE864844E /* ProximityBattery.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -216,6 +216,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6F33CD4659A30612D91F3F9A /* AirPodsLink.swift in Sources */,
 				4D2FD0561B35C8A9AD16EB16 /* AppModel.swift in Sources */,
 				907B8B61A49BA069FD72BE74 /* AppRows.swift in Sources */,
 				68B7503F66B88D6B681C6ED7 /* AppTap.swift in Sources */,
@@ -234,7 +235,6 @@
 				F9242401F43595C31B267D65 /* PanelView.swift in Sources */,
 				89198E567D1456C3C64C375D /* PresetStore.swift in Sources */,
 				1F3CDB2614DA212DB36FF2A1 /* ProcessMonitor.swift in Sources */,
-				4FEFE0DC1AA38C556DDABDD5 /* ProximityBattery.swift in Sources */,
 				96E3D5D072C4944E4B4E2844 /* SettingsView.swift in Sources */,
 				9EC112EEB6A0816A3C26D10D /* Theme.swift in Sources */,
 				41B0EFF43978800F7F2F4675 /* ToneApp.swift in Sources */,

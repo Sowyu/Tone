@@ -160,15 +160,15 @@ struct OutputList: View {
         ForEach(model.bluetooth.disconnected) { paired in
             DeviceRow(id: "bt:\(paired.id)", name: paired.name, symbol: paired.symbol, selected: false,
                       trailing: model.bluetooth.connecting.contains(paired.id) ? "Connecting…" : nil,
-                      battery: model.bluetooth.proximity.battery(forName: paired.name).flatMap { $0.buds ?? $0.main }) {
+                      battery: model.bluetooth.battery(forName: paired.name)?.shown) {
                 model.bluetooth.connect(paired, devices: model.devices)
             }
         }
     }
 }
 
-/// One output, plus its listening modes when expanded. Like the system menu,
-/// only the selected device offers them, and clicking it opens and closes them.
+/// One output, plus the AirPods section when expanded. Like the system menu,
+/// only the selected AirPods offer it, and clicking the row opens and closes it.
 private struct OutputItem: View {
     @Environment(AppModel.self) private var model
     @Environment(PanelState.self) private var panel
@@ -176,32 +176,32 @@ private struct OutputItem: View {
 
     private var selected: Bool { device.id == model.devices.defaultOutputID }
     private var details: BluetoothDetails? { model.bluetooth.details(for: device) }
-    private var hasModes: Bool { selected && !(details?.modes.isEmpty ?? true) }
-    private var expanded: Bool { hasModes && panel.expandedDevice == device.uid }
+    private var hasSection: Bool { selected && details?.isAirPods == true }
+    private var expanded: Bool { hasSection && panel.expandedDevice == device.uid }
 
     private func setExpanded(_ value: Bool) {
         Motion.animate { panel.expandedDevice = value ? device.uid : nil }
     }
 
     var body: some View {
-        let battery = details?.battery
-        DeviceRow(id: "out:\(device.uid)", name: device.name, symbol: device.symbol, selected: selected,
-                  trailing: nil, battery: battery?.buds ?? battery?.main,
-                  chevron: hasModes ? expanded : nil,
+        DeviceRow(id: "out:\(device.uid)", name: device.name, symbol: details?.symbol ?? device.symbol, selected: selected,
+                  trailing: nil, battery: model.bluetooth.battery(forName: device.name, details: details)?.shown,
+                  chevron: hasSection ? expanded : nil,
                   expand: expandAction, action: activate)
-        if expanded, let details {
-            ListeningModes(device: device, details: details)
+            .background(expanded ? Color.primary.opacity(0.04) : .clear)
+        if expanded {
+            AirPodsSection(device: device, details: details ?? BluetoothDetails())
                 .transition(.opacity)
         }
     }
 
     private var expandAction: (@MainActor (Bool) -> Void)? {
-        guard hasModes else { return nil }
+        guard hasSection else { return nil }
         return { value in setExpanded(value) }
     }
 
     private func activate() {
-        if hasModes { setExpanded(!expanded) } else { model.devices.setDefaultOutput(device) }
+        if hasSection { setExpanded(!expanded) } else { model.devices.setDefaultOutput(device) }
     }
 }
 
@@ -221,29 +221,32 @@ struct InputList: View {
 }
 
 /// The system Sound menu's device row: the device's glyph in a 26 pt circle,
-/// accent when selected, battery under the name.
+/// accent when selected. AirPods show their battery under the name with one bud,
+/// other devices on the right with a battery gauge.
 struct DeviceRow: View {
     let id: String
     let name: String
     let symbol: String
     let selected: Bool
     let trailing: String?
-    /// Shown under the name with a small glyph, like the system Sound menu.
     var battery: Int? = nil
     /// nil for no chevron, otherwise whether it points down.
     var chevron: Bool?
     var expand: (@MainActor (Bool) -> Void)?
     let action: @MainActor () -> Void
 
+    private var budGlyph: String? { Self.budGlyph(for: symbol) }
+
     var body: some View {
+        let under = budGlyph.flatMap { glyph in battery.map { (glyph, $0) } }
         HStack(spacing: 8) {
             DeviceCircle(symbol: symbol, selected: selected)
             VStack(alignment: .leading, spacing: 1) {
                 Text(name).lineLimit(1).truncationMode(.tail)
-                if let battery {
+                if let (glyph, level) = under {
                     HStack(spacing: 3) {
-                        Image(systemName: Self.batteryGlyph(for: symbol))
-                        Text("\(battery)%").monospacedDigit()
+                        Image(systemName: glyph).symbolRenderingMode(.hierarchical)
+                        Text("\(level)%").monospacedDigit()
                     }
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
@@ -252,6 +255,13 @@ struct DeviceRow: View {
             Spacer(minLength: 6)
             if let trailing {
                 Text(trailing).monospacedDigit().foregroundStyle(.secondary).lineLimit(1).fixedSize()
+            } else if budGlyph == nil, let battery {
+                HStack(spacing: 5) {
+                    Text("\(battery)%").monospacedDigit().foregroundStyle(.secondary)
+                    BatteryGauge(level: battery)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Battery \(battery)%")
             }
             if let chevron {
                 Image(systemName: "chevron.right")
@@ -260,17 +270,39 @@ struct DeviceRow: View {
                     .rotationEffect(.degrees(chevron ? 90 : 0))
             }
         }
-        .padding(.vertical, battery == nil ? 0 : 3)
+        .padding(.vertical, under == nil ? 0 : 3)
         .menuRow(id, height: Metrics.deviceRowHeight, expand: expand, action: action)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    /// One bud for AirPods, as the system menu draws it, otherwise a battery.
-    static func batteryGlyph(for symbol: String) -> String {
-        if symbol.contains("max") { return symbol }
-        if symbol.contains("pro") { return "airpodpro.right" }
-        if symbol.hasPrefix("airpods") { return "airpod.right" }
-        return "battery.75percent"
+    /// One bud of the same AirPods, as the system menu draws it. nil for anything else.
+    static func budGlyph(for symbol: String) -> String? {
+        guard symbol.hasPrefix("airpod"), !symbol.contains("max") else { return nil }
+        let right = symbol + ".right"
+        if NSImage(systemSymbolName: right, accessibilityDescription: nil) != nil { return right }
+        return symbol.contains("pro") ? "airpodpro.right" : "airpod.right"
+    }
+}
+
+/// The menu bar battery's shape: a pill filled to the level with a nub on the right.
+private struct BatteryGauge: View {
+    let level: Int
+
+    var body: some View {
+        HStack(spacing: 1) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(.secondary.opacity(0.4))
+                .overlay(alignment: .leading) {
+                    GeometryReader { geo in
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(.secondary)
+                            .frame(width: geo.size.width * CGFloat(min(max(level, 0), 100)) / 100)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .frame(width: 21, height: 11)
+            RoundedRectangle(cornerRadius: 1).fill(.secondary.opacity(0.4)).frame(width: 1.5, height: 4)
+        }
     }
 }
 
@@ -283,6 +315,7 @@ private struct DeviceCircle: View {
         ZStack {
             Circle().fill(fill)
             Image(systemName: symbol)
+                .symbolRenderingMode(.hierarchical)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(glyph)
         }
@@ -309,33 +342,146 @@ private struct DeviceCircle: View {
     }
 }
 
-/// Listening Mode list under the selected AirPods, like the system menu's submenu.
-private struct ListeningModes: View {
+/// The system menu's AirPods section, on a lighter rounded band under the device row.
+/// Listening mode and Conversation Awareness go over the AirPods' own control
+/// channel (AirPodsLink). Spatial Audio shows Not Available, as the system menu
+/// does on a Mac.
+private struct AirPodsSection: View {
     @Environment(AppModel.self) private var model
     let device: AudioDevice
     let details: BluetoothDetails
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Listening Mode")
-                .font(.system(size: NSFont.smallSystemFontSize, weight: .semibold))
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, Metrics.inset + 34)
-                .frame(height: 22)
-            ForEach(details.modes) { mode in
-                let on = details.listeningMode == mode
-                HStack(spacing: 0) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .semibold))
-                        .opacity(on ? 1 : 0)
-                        .frame(width: 34, alignment: .center)
-                    Text(mode.title)
-                    Spacer(minLength: 0)
-                }
-                .menuRow("mode:\(mode.rawValue)") { model.bluetooth.setListeningMode(mode, for: device) }
-                .accessibilityAddTraits(on ? .isSelected : [])
+    private var link: AirPodsLink? { model.bluetooth.link(for: device) }
+
+    /// The system's order, with Off only while it's the current mode.
+    private var modes: [ListeningMode] {
+        [.off, .transparency, .adaptive, .noiseCancellation].filter { mode in
+            switch mode {
+            case .off: link?.listeningMode == .off
+            case .adaptive: details.hasAdaptive
+            default: true
             }
         }
-        .padding(.bottom, 2)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header("Listening Mode")
+            ForEach(modes) { mode in
+                OptionRow(id: "mode:\(mode.rawValue)", glyph: Self.glyph(for: mode), title: mode.title,
+                          on: link?.listeningMode == mode) {
+                    link?.setListeningMode(mode)
+                }
+            }
+            separator
+            header("Spatial Audio")
+            OptionRow(id: "spatial", glyph: .system("person.spatialaudio.fill"), title: "Not Available", on: false, action: nil)
+            separator
+            header("Conversation Awareness")
+            ForEach([false, true], id: \.self) { value in
+                OptionRow(id: "ca:\(value)", glyph: .system("person.wave.2.fill"), title: value ? "On" : "Off",
+                          on: link?.conversationAwareness == value) {
+                    link?.setConversationAwareness(value)
+                }
+            }
+        }
+        // Measured on the system menu: 17 pt from the band's top to the first
+        // header's capitals, 18 pt from the last row's middle to its bottom.
+        .padding(.top, 9.5)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.primary.opacity(0.12))
+                .padding(.horizontal, Metrics.highlightInset)
+        )
+        // 8.5 pt between the band and the device circles above and below.
+        .padding(.top, 2.5)
+        .padding(.bottom, 5.5)
+    }
+
+    private func header(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, Metrics.inset)
+            .frame(height: Metrics.rowHeight)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private var separator: some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.13))
+            .frame(height: 1)
+            .padding(.horizontal, 8 + Metrics.highlightInset)
+            .padding(.vertical, 4.5)
+    }
+
+    /// The system's glyphs. Adaptive's is a private symbol, so it falls back to sparkles.
+    static func glyph(for mode: ListeningMode) -> OptionRow.Glyph {
+        switch mode {
+        case .off: .system("person.fill")
+        case .transparency: .system("person.crop.circle.dashed")
+        case .adaptive: .privateSymbol("person.and.sparkles.fill", fallback: "sparkles")
+        case .noiseCancellation: .system("person.crop.circle")
+        }
+    }
+}
+
+/// A row in the AirPods section: checkmark column, glyph, title. Without an
+/// action it's greyed like the system's unavailable items.
+private struct OptionRow: View {
+    enum Glyph {
+        case system(String)
+        case privateSymbol(String, fallback: String)
+    }
+
+    let id: String
+    let glyph: Glyph
+    let title: String
+    let on: Bool
+    let action: (@MainActor () -> Void)?
+
+    var body: some View {
+        let row = HStack(spacing: 0) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .semibold))
+                .opacity(on ? 1 : 0)
+                .frame(width: 23)
+            image
+                .font(.system(size: 14))
+                .frame(width: 36)
+            Text(title)
+            Spacer(minLength: 0)
+        }
+        if let action {
+            row.menuRow(id, action: action)
+                .accessibilityAddTraits(on ? .isSelected : [])
+        } else {
+            row.foregroundStyle(.tertiary)
+                .padding(.horizontal, Metrics.inset)
+                .frame(height: Metrics.rowHeight)
+                .accessibilityElement(children: .combine)
+        }
+    }
+
+    @ViewBuilder private var image: some View {
+        switch glyph {
+        case let .system(name):
+            Image(systemName: name)
+        case let .privateSymbol(name, fallback):
+            if let image = Self.privateSymbol(name) {
+                Image(nsImage: image).renderingMode(.template)
+            } else {
+                Image(systemName: fallback)
+            }
+        }
+    }
+
+    private static func privateSymbol(_ name: String) -> NSImage? {
+        let selector = NSSelectorFromString("imageWithPrivateSystemSymbolName:")
+        guard NSImage.responds(to: selector) else { return nil }
+        let image = (NSImage.self as AnyObject).perform(selector, with: name)?.takeUnretainedValue() as? NSImage
+        return image?.withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
     }
 }

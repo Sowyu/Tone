@@ -12,7 +12,7 @@ The design is Jace's sound mixer concept (JaceThings on X): https://x.com/JaceTh
 
 The status item opens a panel laid out like the concept video: Sound with the output slider, then Output, Input, Now Playing and Applications as sections that open and close, then Settings… and Quit Tone. It is drawn to match a macOS 27 menu. The surface is the same `NSGlassEffectView` a native menu uses, with its 12 pt radius. Rows have the native highlight, an accent fill inset 5 pt from the edge with white text, and only one row is ever highlighted. The mouse and the arrow keys move the same highlight. Return clicks, Right and Left open and close, and Escape closes the panel.
 
-Output rows match the system Sound menu, with the device's glyph in a circle, battery levels, and paired Bluetooth outputs that connect when clicked. Selected AirPods open their Listening Mode list. Clicking an app or a Now Playing row springs open its volume slider, Equalizer switch and Preset menu, and the graph button next to Preset shows the equalizer in a popover to the left. The curve is the actual magnitude response of the biquads the DSP runs. Right-click an app for Keep in Menu, Reset Volume, Move Up, Move Down and Hide from Menu. Reduce Motion swaps the springs for a short fade.
+Output rows match the system Sound menu, with the device's glyph in a circle, battery levels, and paired Bluetooth outputs that connect when clicked. Selected AirPods open the system menu's AirPods section, where Listening Mode and Conversation Awareness switch the AirPods and follow changes made elsewhere. Clicking an app or a Now Playing row springs open its volume slider, Equalizer switch and Preset menu, and the graph button next to Preset shows the equalizer in a popover to the left. The curve is the actual magnitude response of the biquads the DSP runs. Right-click an app for Keep in Menu, Reset Volume, Move Up, Move Down and Hide from Menu. Reduce Motion swaps the springs for a short fade.
 
 ## Requirements
 
@@ -106,7 +106,8 @@ Signing material (`*.p12`, `*.cer`, keys, keychains, `Signing.local.xcconfig`) i
 - Now Playing needs `media-control`. Since macOS 15.4 only Apple-entitled apps can read MediaRemote directly, and there's no public API for other apps' sessions. Without the tool the section is left out of the panel, and Settings says how to install it.
 - MediaRemote exposes one active session. Tone keeps earlier sessions listed as paused until their app quits, but only the active one accepts play/pause and next.
 - Command line tools are grouped under the app that launched them. For example, `afplay` started from Terminal shows up as Terminal.
-- AirPods that aren't connected show battery in 10% steps, read from their Bluetooth advertisement while the case is open. The system menu reads an encrypted exact value, so its number can be a few percent higher.
+- Listening Mode and Conversation Awareness go over the AirPods' own control channel (AACP, L2CAP PSM 0x1001), using private IOBluetooth calls looked up at runtime. IOBluetooth's `setListeningMode:` only changes a value inside the app, and the system's own routes need Apple-only entitlements. Spatial Audio shows Not Available, as it does in the system menu on a Mac.
+- Battery comes from the accessory power sources the system keeps (what `pmset -g accps` prints), so nearby AirPods show the system's exact number before connecting. Headphones the system doesn't list there, such as Sony headphones that aren't connected, show no battery. The system menu's cached last-known value for those isn't readable without an Apple entitlement.
 - If an output device also has input channels, such as a USB headset, the aggregate lists those first. Tone reads the tap from the last input stream.
 
 ## License
