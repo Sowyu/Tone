@@ -25,7 +25,7 @@ struct SettingsView: View {
                 .settingsAction()
             }
 
-            SettingsSection(title: "General", symbol: "gearshape.fill", tint: .gray) {
+            SettingsSection(title: "General", symbol: "gearshape.fill") {
                 SettingsRow(title: "Open at login") {
                     Toggle("Open at login", isOn: $launchAtLogin)
                         .toggleStyle(.switch)
@@ -51,7 +51,7 @@ struct SettingsView: View {
                 }
             }
 
-            SettingsSection(title: "Volume", symbol: "speaker.wave.2.fill", tint: .pink) {
+            SettingsSection(title: "Volume", symbol: "speaker.wave.2.fill") {
                 SettingsRow(title: "Maximum app volume",
                             detail: "Above 100%, Tone limits peaks so the boosted sound doesn't distort.") {
                     Picker("Maximum app volume", selection: $store.state.overdriveLimit) {
@@ -67,7 +67,7 @@ struct SettingsView: View {
                 }
             }
 
-            SettingsSection(title: "Equalizer presets", symbol: "slider.vertical.3", tint: .orange) {
+            SettingsSection(title: "Equalizer presets", symbol: "slider.vertical.3") {
                 if model.presets.custom.isEmpty {
                     Text("Add presets from an app's Preset menu.")
                         .foregroundStyle(.secondary)
@@ -100,7 +100,7 @@ struct SettingsView: View {
             }
 
             if !store.state.hidden.isEmpty {
-                SettingsSection(title: "Hidden apps", symbol: "eye.slash.fill", tint: .indigo) {
+                SettingsSection(title: "Hidden apps", symbol: "eye.slash.fill") {
                     ForEach(store.state.hidden, id: \.self) { key in
                         SettingsRow(title: model.displayName(key)) {
                             Button("Show in Menu") { model.unhide(key) }
@@ -109,7 +109,7 @@ struct SettingsView: View {
                 }
             }
 
-            SettingsSection(title: "Permissions", symbol: "hand.raised.fill", tint: .blue) {
+            SettingsSection(title: "Permissions", symbol: "hand.raised.fill") {
                 SettingsRow(title: "System audio recording") {
                     switch model.permission.status {
                     case .authorized: Text("Allowed").foregroundStyle(.secondary)

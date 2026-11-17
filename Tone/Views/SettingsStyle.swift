@@ -59,7 +59,6 @@ final class SettingsWindow: NSWindow {
 struct SettingsSection<Content: View>: View {
     let title: String
     let symbol: String
-    var tint: Color = .gray
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -68,7 +67,7 @@ struct SettingsSection<Content: View>: View {
                 // A fixed slot keeps every heading's text on the same line, whatever the symbol's width.
                 Image(systemName: symbol)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(tint)
+                    .foregroundStyle(.secondary)
                     .frame(width: 20)
                 Text(title).font(.system(size: 14, weight: .semibold))
             }
