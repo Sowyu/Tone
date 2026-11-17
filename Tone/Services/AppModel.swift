@@ -14,7 +14,7 @@ final class AppModel {
     let bluetooth = BluetoothAudio()
     @ObservationIgnored let engine = AudioEngine()
 
-    /// True while the menu is open; the Now Playing marquee only runs then.
+    /// True while the panel is open; it only renders, and the marquee only runs, then.
     var isMenuOpen = false
 
     /// Apps that produced audio at least once since they launched.

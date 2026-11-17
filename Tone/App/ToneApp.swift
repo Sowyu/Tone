@@ -16,12 +16,12 @@ enum ToneMain {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var model: AppModel!
-    private var menu: MenuController!
+    private var panel: PanelController!
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         model = AppModel()
-        menu = MenuController(model: model) { [weak self] in self?.showSettings() }
+        panel = PanelController(model: model) { [weak self] in self?.showSettings() }
         if Diagnostics.shared.enabled { addDebugHooks() }
     }
 
@@ -43,23 +43,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
     }
 
-    /// Lets scripts open the UI: post "com.gooober.tone.debug.<name>" as a distributed notification.
+    /// Lets scripts open the UI: post "com.gooober.tone.debug.<name>" as a distributed
+    /// notification. "expand" and "keys" take their argument as the notification's object.
     private func addDebugHooks() {
         // DebugAppearance "light" or "dark" overrides the system appearance.
         if let name = UserDefaults.standard.string(forKey: "DebugAppearance") {
             NSApp.appearance = NSAppearance(named: name == "light" ? .aqua : .darkAqua)
         }
-        let hooks: [String: @MainActor (AppDelegate) -> Void] = [
-            "panel": { $0.menu.debugOpen() },
-            "settings": { $0.showSettings() },
-            "equalizer": { delegate in
-                if let key = delegate.model.applicationKeys.first { delegate.menu.showEqualizer(key) }
-            },
+        let hooks: [String: @MainActor (AppDelegate, String?) -> Void] = [
+            "panel": { delegate, _ in delegate.panel.toggle() },
+            "settings": { delegate, _ in delegate.showSettings() },
+            "equalizer": { delegate, _ in delegate.panel.debugExpand(row: "app", equalizer: true) },
+            "expand": { delegate, row in delegate.panel.debugExpand(row: row ?? "app", equalizer: false) },
+            "keys": { delegate, keys in delegate.panel.debugKeys(keys ?? "") },
         ]
         for (name, hook) in hooks {
             DistributedNotificationCenter.default().addObserver(
-                forName: .init("com.gooober.tone.debug.\(name)"), object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self.map(hook) }
+                forName: .init("com.gooober.tone.debug.\(name)"), object: nil, queue: .main) { [weak self] note in
+                let argument = note.object as? String
+                MainActor.assumeIsolated { if let self { hook(self, argument) } }
             }
         }
     }

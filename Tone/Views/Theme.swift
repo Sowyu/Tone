@@ -1,10 +1,28 @@
-import Foundation
+import AppKit
+import SwiftUI
 
+/// Measured from a native NSMenu on macOS 27 (2x screenshots, values in points).
 enum Metrics {
-    /// Width of the menu and of the SwiftUI rows inside it.
-    static let menuWidth: CGFloat = 300
-    /// Left and right margin of native menu items on macOS 27.
+    static let width: CGFloat = 300
+    /// Text and separator inset from the panel edge.
     static let inset: CGFloat = 16
+    /// The hover highlight is inset from the panel edge and rounded.
+    static let highlightInset: CGFloat = 5
+    static let highlightRadius: CGFloat = 7
+    static let cornerRadius: CGFloat = 12
+    static let rowHeight: CGFloat = 24
+    static let deviceRowHeight: CGFloat = 32
+    static let appIcon: CGFloat = 18
+    /// Transparent room around the panel for its shadow.
+    static let shadowMargin: CGFloat = 40
+}
+
+enum Motion {
+    static var reduce: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+    /// The one spring every expand and collapse uses. Reduce Motion swaps it for a short fade.
+    static var spring: Animation { reduce ? .easeInOut(duration: 0.15) : .spring(response: 0.32, dampingFraction: 0.86) }
+
+    static func animate(_ body: () -> Void) { withAnimation(spring, body) }
 }
 
 enum SpeakerSymbol {
