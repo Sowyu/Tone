@@ -1,6 +1,7 @@
 # Tone build + stable signing.
 #   make install   build, sign with the stable identity, copy to /Applications, verify
-#   make ci        unsigned build, no secrets (used by GitHub Actions)
+#   make ci        unsigned build plus the update self-check, no secrets (used by GitHub Actions)
+#   make release NOTES=build/notes.md [DRY_RUN=1]   build Tone.dmg and publish a GitHub release
 
 APP_NAME    := Tone
 BUNDLE_ID   := com.gooober.tone
@@ -12,7 +13,7 @@ ENTITLEMENTS:= Tone/Resources/Tone.entitlements
 LOCAL_CONF  := Config/Signing.local.xcconfig
 IDENTITY    := $(shell sed -n 's/^TONE_SIGNING_IDENTITY *= *//p' $(LOCAL_CONF) 2>/dev/null)
 
-.PHONY: all project build sign install verify ci clean identity run
+.PHONY: all project build sign install verify ci check release clean identity run
 
 all: install
 
@@ -54,7 +55,16 @@ verify:
 run:
 	open $(INSTALL_APP)
 
-ci: project
+# Release parsing and version ordering for the in-app updater.
+check:
+	@mkdir -p $(BUILD_DIR)
+	swiftc -parse-as-library Tone/Services/Updates.swift scripts/check-updates.swift -o $(BUILD_DIR)/check-updates
+	$(BUILD_DIR)/check-updates
+
+release:
+	./scripts/release.sh $(if $(DRY_RUN),--dry-run) $(NOTES)
+
+ci: project check
 	xcodebuild -project $(APP_NAME).xcodeproj -scheme $(APP_NAME) -configuration Release \
 		-derivedDataPath $(DERIVED) -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" build
 

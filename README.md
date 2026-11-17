@@ -37,6 +37,19 @@ make install
 
 The local signing certificate is what lets macOS remember Tone's permissions across rebuilds.
 
+## Updates
+
+Tone checks GitHub for a new release once a day, and you can check yourself from Settings. It only installs when you click Install Update. Before swapping anything in, it checks the download's SHA-256 against GitHub and makes sure the new app is signed with the same certificate as the one you have. If the new version doesn't start, your old copy comes back.
+
+## Making a release
+
+1. Bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml`, then commit and push to main
+2. Write the release notes in `build/notes.md`
+3. Run `make release NOTES=build/notes.md DRY_RUN=1` to build and check `build/Tone.dmg` without publishing
+4. Run `make release NOTES=build/notes.md` to publish it as release `v<version>` on GitHub
+
+The release has to be signed with the same "Tone Local Signing" certificate every time, or Tone won't accept the update.
+
 ## Credits
 
 The design is based on Jace's sound mixer concept ([JaceThings on X](https://x.com/JaceThings/status/2105247096916099505)). Tone isn't affiliated with Jace.

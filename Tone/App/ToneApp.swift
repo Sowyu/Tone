@@ -5,6 +5,11 @@ import SwiftUI
 @MainActor
 enum ToneMain {
     static func main() {
+        // The updater runs a copy of this binary as its install helper.
+        let arguments = CommandLine.arguments
+        if arguments.count == 3, arguments[1] == "--install-update" {
+            exit(UpdateInstaller.runHelper(URL(fileURLWithPath: arguments[2])))
+        }
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
@@ -17,12 +22,17 @@ enum ToneMain {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var model: AppModel!
     private var panel: PanelController!
+    private let updates = UpdateController()
     private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         model = AppModel()
         panel = PanelController(model: model) { [weak self] in self?.showSettings() }
         if Diagnostics.shared.enabled { addDebugHooks() }
+        // Confirms a healthy start to the update helper, or rolls back an interrupted update.
+        _ = try? UpdateInstaller.acknowledgeLaunch()
+        updates.showSettings = { [weak self] in self?.showSettings() }
+        updates.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -31,16 +41,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showSettings() {
         let window = settingsWindow ?? {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView().environment(model)))
+            let root = SettingsView().environment(model).environment(updates)
+            let window = SettingsWindow(contentViewController: NSHostingController(rootView: root))
             window.title = "Tone Settings"
             window.styleMask = [.titled, .closable]
+            SettingsStyle.prepareWindow(window)
             window.isReleasedWhenClosed = false
             window.center()
             settingsWindow = window
             return window
         }()
-        NSApp.activate()
-        window.makeKeyAndOrderFront(nil)
+        SettingsStyle.present(window)
     }
 
     /// Lets scripts open the UI: post "com.gooober.tone.debug.<name>" as a distributed
