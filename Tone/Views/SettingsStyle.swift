@@ -65,12 +65,11 @@ struct SettingsSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                // A System Settings style tile: white glyph on a colored rounded square.
+                // A fixed slot keeps every heading's text on the same line, whatever the symbol's width.
                 Image(systemName: symbol)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 20, height: 20)
-                    .background(tint.gradient, in: .rect(cornerRadius: 5, style: .continuous))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(tint)
+                    .frame(width: 20)
                 Text(title).font(.system(size: 14, weight: .semibold))
             }
             .accessibilityElement(children: .combine)
