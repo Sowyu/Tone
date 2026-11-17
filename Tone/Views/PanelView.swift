@@ -159,8 +159,8 @@ struct OutputList: View {
         // Paired but not connected, as in the system Sound menu: click to connect.
         ForEach(model.bluetooth.disconnected) { paired in
             DeviceRow(id: "bt:\(paired.id)", name: paired.name, symbol: paired.symbol, selected: false,
-                      trailing: model.bluetooth.connecting.contains(paired.id) ? "Connecting…"
-                        : model.bluetooth.proximity.battery(forName: paired.name).flatMap { $0.buds ?? $0.main }.map { "\($0)%" }) {
+                      trailing: model.bluetooth.connecting.contains(paired.id) ? "Connecting…" : nil,
+                      battery: model.bluetooth.proximity.battery(forName: paired.name).flatMap { $0.buds ?? $0.main }) {
                 model.bluetooth.connect(paired, devices: model.devices)
             }
         }
@@ -186,7 +186,7 @@ private struct OutputItem: View {
     var body: some View {
         let battery = details?.battery
         DeviceRow(id: "out:\(device.uid)", name: device.name, symbol: device.symbol, selected: selected,
-                  trailing: (battery?.buds ?? battery?.main).map { "\($0)%" },
+                  trailing: nil, battery: battery?.buds ?? battery?.main,
                   chevron: hasModes ? expanded : nil,
                   expand: expandAction, action: activate)
         if expanded, let details {
@@ -221,13 +221,15 @@ struct InputList: View {
 }
 
 /// The system Sound menu's device row: the device's glyph in a 26 pt circle,
-/// accent when selected, battery on the right.
+/// accent when selected, battery under the name.
 struct DeviceRow: View {
     let id: String
     let name: String
     let symbol: String
     let selected: Bool
     let trailing: String?
+    /// Shown under the name with a small glyph, like the system Sound menu.
+    var battery: Int? = nil
     /// nil for no chevron, otherwise whether it points down.
     var chevron: Bool?
     var expand: (@MainActor (Bool) -> Void)?
@@ -236,7 +238,17 @@ struct DeviceRow: View {
     var body: some View {
         HStack(spacing: 8) {
             DeviceCircle(symbol: symbol, selected: selected)
-            Text(name).lineLimit(1).truncationMode(.tail)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(name).lineLimit(1).truncationMode(.tail)
+                if let battery {
+                    HStack(spacing: 3) {
+                        Image(systemName: Self.batteryGlyph(for: symbol))
+                        Text("\(battery)%").monospacedDigit()
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                }
+            }
             Spacer(minLength: 6)
             if let trailing {
                 Text(trailing).monospacedDigit().foregroundStyle(.secondary).lineLimit(1).fixedSize()
@@ -248,8 +260,17 @@ struct DeviceRow: View {
                     .rotationEffect(.degrees(chevron ? 90 : 0))
             }
         }
+        .padding(.vertical, battery == nil ? 0 : 3)
         .menuRow(id, height: Metrics.deviceRowHeight, expand: expand, action: action)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// One bud for AirPods, as the system menu draws it, otherwise a battery.
+    static func batteryGlyph(for symbol: String) -> String {
+        if symbol.contains("max") { return symbol }
+        if symbol.contains("pro") { return "airpodpro.right" }
+        if symbol.hasPrefix("airpods") { return "airpod.right" }
+        return "battery.75percent"
     }
 }
 
