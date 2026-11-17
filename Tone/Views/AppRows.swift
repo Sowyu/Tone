@@ -261,7 +261,12 @@ struct AppControls: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.primary.opacity(0.05))
+        .background(
+            // Same rounded, inset band as the AirPods section.
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.primary.opacity(0.08))
+                .padding(.horizontal, Metrics.highlightInset)
+        )
         .padding(.vertical, 2)
     }
 }
