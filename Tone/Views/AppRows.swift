@@ -18,7 +18,7 @@ struct NowPlayingList: View {
                 }) { panel.toggleRow(rowID) }
                 .contextMenu { AppContextMenu(key: session.id, movable: false) }
             if panel.expandedRow == rowID {
-                AppControls(key: session.id).transition(.opacity.combined(with: .move(edge: .top)))
+                AppControls(key: session.id).transition(.opacity)
             }
         }
     }
@@ -44,7 +44,7 @@ struct ApplicationList: View {
                 .contextMenu { AppContextMenu(key: key, movable: true) }
                 .accessibilityValue(expanded ? "expanded" : "collapsed")
             if expanded {
-                AppControls(key: key).transition(.opacity.combined(with: .move(edge: .top)))
+                AppControls(key: key).transition(.opacity)
             }
         }
     }

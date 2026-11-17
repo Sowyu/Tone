@@ -24,7 +24,24 @@ final class PanelState {
     @ObservationIgnored var close: () -> Void = {}
     @ObservationIgnored var openSettings: () -> Void = {}
 
+    /// Where the mouse was when the highlight last followed it. Rows that slide
+    /// under a still cursor during an animation don't take the highlight; like a
+    /// native menu, only a real mouse move does.
+    @ObservationIgnored private var lastMouse: CGPoint?
+
+    func hover(_ id: String, active: Bool) {
+        let mouse = NSEvent.mouseLocation
+        guard mouse != lastMouse else { return }
+        if active {
+            lastMouse = mouse
+            if highlighted != id { highlighted = id }
+        } else if highlighted == id {
+            highlighted = nil
+        }
+    }
+
     func reset() {
+        lastMouse = nil
         highlighted = nil
         eqTarget = nil
     }
@@ -108,10 +125,7 @@ struct MenuRow: ViewModifier {
             }
             .contentShape(Rectangle())
             .onContinuousHover { phase in
-                switch phase {
-                case .active: if panel.highlighted != id { panel.highlighted = id }
-                case .ended: if panel.highlighted == id { panel.highlighted = nil }
-                }
+                if case .active = phase { panel.hover(id, active: true) } else { panel.hover(id, active: false) }
             }
             .onTapGesture { action() }
             .preference(key: MenuRowsKey.self, value: [MenuRowEntry(id: id, action: action, expand: expand)])

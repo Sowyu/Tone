@@ -72,7 +72,7 @@ struct PanelContent: View {
                     if panel.openSections.contains(section) {
                         sectionContent(section)
                             .padding(.bottom, 2)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .transition(.opacity)
                     }
                 }
             }
@@ -190,7 +190,7 @@ private struct OutputItem: View {
                   expand: expandAction, action: activate)
         if expanded, let details {
             ListeningModes(device: device, details: details)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(.opacity)
         }
     }
 
