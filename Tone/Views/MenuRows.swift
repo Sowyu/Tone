@@ -6,7 +6,7 @@ extension NSMenuItem {
     /// view items can't open submenus and don't get the native highlight.
     @MainActor
     static func hosting(_ row: some View) -> NSMenuItem {
-        let view = NSHostingView(rootView: row.frame(minWidth: Metrics.menuWidth, maxWidth: .infinity))
+        let view = NSHostingView(rootView: row.frame(minWidth: Metrics.menuWidth, idealWidth: Metrics.menuWidth, maxWidth: .infinity))
         view.frame.size = view.fittingSize
         view.autoresizingMask = .width
         let item = NSMenuItem()
