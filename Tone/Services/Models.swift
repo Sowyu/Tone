@@ -21,7 +21,7 @@ struct EQPreset: Codable, Identifiable, Equatable, Sendable {
 
 /// Everything Tone remembers about one app, keyed by bundle ID.
 struct AppAudioSettings: Codable, Equatable, Sendable {
-    /// 0...2, where 1 is 100%.
+    /// 0 up to the maximum app volume (at most 5), where 1 is 100%.
     var volume: Double = 1
     var eqEnabled = false
     var eq = EQSettings.flat

@@ -59,6 +59,9 @@ struct SettingsView: View {
                         Text("125%").tag(1.25)
                         Text("150%").tag(1.5)
                         Text("200%").tag(2.0)
+                        Text("300%").tag(3.0)
+                        Text("400%").tag(4.0)
+                        Text("500%").tag(5.0)
                     }
                     .labelsHidden()
                 }
