@@ -88,20 +88,8 @@ struct MenuRowsKey: PreferenceKey {
     static func reduce(value: inout [MenuRowEntry], nextValue: () -> [MenuRowEntry]) { value += nextValue() }
 }
 
-private struct MenuHighlightedKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-extension EnvironmentValues {
-    /// True inside the highlighted row, where text and glyphs turn white.
-    var menuHighlighted: Bool {
-        get { self[MenuHighlightedKey.self] }
-        set { self[MenuHighlightedKey.self] = newValue }
-    }
-}
-
-/// A clickable row that highlights like a native menu item: accent fill inset
-/// from the panel edge, white text, one row at a time.
+/// A clickable row that highlights like a Control Center row: a soft grey fill
+/// inset from the panel edge, one row at a time.
 struct MenuRow: ViewModifier {
     @Environment(PanelState.self) private var panel
     let id: String
@@ -114,12 +102,11 @@ struct MenuRow: ViewModifier {
         content
             .frame(maxWidth: .infinity, minHeight: height, alignment: .leading)
             .padding(.horizontal, Metrics.inset)
-            .foregroundStyle(lit ? AnyShapeStyle(Color.white) : AnyShapeStyle(.primary))
-            .environment(\.menuHighlighted, lit)
+            .foregroundStyle(.primary)
             .background {
                 if lit {
                     RoundedRectangle(cornerRadius: Metrics.highlightRadius, style: .continuous)
-                        .fill(Color(nsColor: .controlAccentColor))
+                        .fill(.primary.opacity(0.1))
                         .padding(.horizontal, Metrics.highlightInset)
                 }
             }
@@ -181,12 +168,9 @@ struct SectionHeader: View {
     }
 }
 
-/// Section header grey, white while highlighted.
+/// Section header grey.
 private struct HeaderTint: ViewModifier {
-    @Environment(\.menuHighlighted) private var lit
-    func body(content: Content) -> some View {
-        content.foregroundStyle(lit ? AnyShapeStyle(Color.white) : AnyShapeStyle(.tertiary))
-    }
+    func body(content: Content) -> some View { content.foregroundStyle(.tertiary) }
 }
 
 /// Greyed-out text, such as "Not Playing".

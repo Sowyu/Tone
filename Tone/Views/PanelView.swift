@@ -307,7 +307,6 @@ private struct BatteryGauge: View {
 }
 
 private struct DeviceCircle: View {
-    @Environment(\.menuHighlighted) private var lit
     let symbol: String
     let selected: Bool
 
@@ -323,23 +322,8 @@ private struct DeviceCircle: View {
         .accessibilityHidden(true)
     }
 
-    private var fill: Color {
-        switch (selected, lit) {
-        case (true, false): Color(nsColor: .controlAccentColor)
-        case (true, true): .white
-        case (false, true): .white.opacity(0.15)
-        case (false, false): .primary.opacity(0.1)
-        }
-    }
-
-    private var glyph: Color {
-        switch (selected, lit) {
-        case (true, false): .white
-        case (true, true): Color(nsColor: .controlAccentColor)
-        case (false, true): .white
-        case (false, false): .primary.opacity(0.75)
-        }
-    }
+    private var fill: Color { selected ? Color(nsColor: .controlAccentColor) : .primary.opacity(0.1) }
+    private var glyph: Color { selected ? .white : .primary.opacity(0.75) }
 }
 
 /// The system menu's AirPods section, on a lighter rounded band under the device row.

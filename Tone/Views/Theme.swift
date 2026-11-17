@@ -8,7 +8,7 @@ enum Metrics {
     static let inset: CGFloat = 16
     /// The hover highlight is inset from the panel edge and rounded.
     static let highlightInset: CGFloat = 5
-    static let highlightRadius: CGFloat = 7
+    static let highlightRadius: CGFloat = 10
     static let cornerRadius: CGFloat = 12
     static let rowHeight: CGFloat = 24
     static let deviceRowHeight: CGFloat = 32
