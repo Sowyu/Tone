@@ -25,7 +25,7 @@ struct EQPanel: View {
     private func parameter(_ title: String, value: String, range: ClosedRange<Double>,
                            _ path: WritableKeyPath<EQSettings, Double>) -> some View {
         let binding = Binding(get: { model.settings(key).eq[keyPath: path] },
-                              set: { new in model.setEQ(key) { $0[keyPath: path] = (new * 10).rounded() / 10 } })
+                              set: { new in model.setEQ(key) { $0[keyPath: path] = path == \.preamp ? EQSnap.db(new, fine: NSEvent.modifierFlags.contains(.option)) : (new * 10).rounded() / 10 } })
         return GridRow {
             Text(title)
             Slider(value: binding, in: range) { Text(title) }.labelsHidden()
@@ -34,6 +34,16 @@ struct EQPanel: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 58, alignment: .trailing)
         }
+    }
+}
+
+/// Gains move in 0.5 dB steps and stick to 0 dB within 1 dB, so flat is easy to hit.
+/// Holding Option gives 0.1 dB steps with no stick.
+enum EQSnap {
+    static func db(_ value: Double, fine: Bool) -> Double {
+        if fine { return (value * 10).rounded() / 10 }
+        if abs(value) < 1 { return 0 }
+        return (value * 2).rounded() / 2
     }
 }
 
@@ -85,9 +95,9 @@ struct EQLayout {
         return plot.midY - CGFloat(clamped / 12) * plot.height / 2
     }
 
-    func db(atY y: CGFloat) -> Double {
+    func db(atY y: CGFloat, fine: Bool) -> Double {
         let v = Double((plot.midY - y) / (plot.height / 2)) * 12
-        return min(max((v * 10).rounded() / 10, -12), 12)
+        return min(max(EQSnap.db(v, fine: fine), -12), 12)
     }
 
     func band(atX x: CGFloat) -> Int {
@@ -190,7 +200,11 @@ struct EQGraph: View {
                         selected = band
                         var t = Transaction()
                         t.disablesAnimations = true
-                        withTransaction(t) { onChange(band, layout.db(atY: g.location.y)) }
+                        let value = layout.db(atY: g.location.y, fine: NSEvent.modifierFlags.contains(.option))
+                        if value == 0, eq.bands[band] != 0 {
+                            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+                        }
+                        withTransaction(t) { onChange(band, value) }
                     }
                     .onEnded { _ in dragBand = nil }
             )
