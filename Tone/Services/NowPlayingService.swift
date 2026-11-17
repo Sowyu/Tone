@@ -150,8 +150,6 @@ final class NowPlayingService {
 
     func togglePlayPause(_ session: NowPlayingSession) { send(session.isPlaying ? .pause : .play, optimistic: session.id) }
     func next(_ session: NowPlayingSession) { send(.nextTrack, optimistic: nil) }
-    /// Pauses whatever the system is playing.
-    func pauseCurrent() { send(.pause, optimistic: sessions.first { $0.isCurrent && $0.isPlaying }?.id) }
 
     private func send(_ command: Command, optimistic id: String?) {
         guard let process = Self.adapterProcess(["send", String(command.rawValue)]) else { return }

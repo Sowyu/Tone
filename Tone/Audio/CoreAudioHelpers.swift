@@ -75,16 +75,6 @@ enum CA {
         return list.reduce(0) { $0 + Int($1.mNumberChannels) }
     }
 
-    /// Core Audio's process object for a PID, once that process has used audio.
-    static func processObject(pid: pid_t) -> AudioObjectID? {
-        var address = address(kAudioHardwarePropertyTranslatePIDToProcessObject)
-        var pid = pid
-        var object = AudioObjectID(kAudioObjectUnknown)
-        var size = UInt32(MemoryLayout<AudioObjectID>.size)
-        let status = AudioObjectGetPropertyData(system, &address, UInt32(MemoryLayout<pid_t>.size), &pid, &size, &object)
-        return status == noErr && object != kAudioObjectUnknown ? object : nil
-    }
-
     static func deviceID(forUID uid: String) -> AudioObjectID? {
         getArray(system, address(kAudioHardwarePropertyDevices), of: AudioObjectID.self)
             .first { getString($0, address(kAudioDevicePropertyDeviceUID)) == uid }

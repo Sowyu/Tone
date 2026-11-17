@@ -74,29 +74,6 @@ struct SettingsView: View {
                     }
                     .settingsPicker()
                 }
-                SettingsRow(title: "Hearing warning",
-                            detail: "Warns when headphones stay louder than the limit for 30 seconds. The level is an estimate.") {
-                    Toggle("Hearing warning", isOn: $store.state.hearingWarning)
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
-                        .labelsHidden()
-                }
-                if store.state.hearingWarning {
-                    SettingsRow(title: "Warn above") {
-                        Menu {
-                            Picker("Warn above", selection: $store.state.hearingLimit) {
-                                ForEach(HearingGuard.limits, id: \.self) { limit in
-                                    Text("\(Int(limit)) dB").tag(limit)
-                                }
-                            }
-                            .pickerStyle(.inline)
-                            .labelsHidden()
-                        } label: {
-                            Text("\(Int(store.state.hearingLimit)) dB").monospacedDigit()
-                        }
-                        .settingsPicker()
-                    }
-                }
             }
 
             SettingsSection(title: "Equalizer presets", symbol: "slider.vertical.3") {

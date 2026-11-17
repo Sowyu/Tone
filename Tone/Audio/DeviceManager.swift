@@ -25,15 +25,6 @@ struct AudioDevice: Identifiable, Hashable, Sendable {
         transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE
     }
 
-    /// Bluetooth, USB, or the built-in jack with headphones plugged in. Speakers,
-    /// displays and AirPlay don't count: their level at the ear can't be guessed.
-    var isHeadphones: Bool {
-        if isBluetooth || transport == kAudioDeviceTransportTypeUSB { return true }
-        guard transport == kAudioDeviceTransportTypeBuiltIn else { return false }
-        let source = CA.get(id, CA.address(kAudioDevicePropertyDataSource, scope: kAudioDevicePropertyScopeOutput), as: UInt32.self)
-        return source == 0x6864_706E // 'hdpn'
-    }
-
     /// The same glyphs the system Sound menu uses: what the device is, not its role.
     static func symbol(name: String, transport: UInt32) -> String {
         let n = name.lowercased()

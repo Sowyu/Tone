@@ -18,11 +18,6 @@ final class AudioEngine {
     static let log = Logger(subsystem: "com.sowyu.tone", category: "audio")
 
     private var taps: [String: AppTap] = [:]
-    /// Measures what the app taps don't, for the hearing warning.
-    private var meter: AppTap?
-    var metering = false {
-        didSet { if metering != oldValue { syncMeter() } }
-    }
     private var neutralSince: [String: Date] = [:]
     private(set) var outputUID: String?
     private(set) var lastError: String?
@@ -50,9 +45,6 @@ final class AudioEngine {
             old.values.forEach { $0.invalidate() }
             return
         }
-        meter?.invalidate()
-        meter = nil
-        defer { syncMeter() }
         for (key, tap) in old {
             do {
                 taps[key] = try AppTap(key: key, processes: tap.processes, outputUID: uid,
@@ -70,7 +62,6 @@ final class AudioEngine {
     func isTapped(_ key: String) -> Bool { taps[key] != nil }
 
     func sync(_ requests: [TapRequest], allowTapping: Bool) {
-        defer { syncMeter() }
         let wanted = Dictionary(requests.map { ($0.app.id, $0) }, uniquingKeysWith: { a, _ in a })
         for (key, tap) in taps where wanted[key] == nil {
             tap.invalidate()
@@ -134,41 +125,6 @@ final class AudioEngine {
                 return
             }
         }
-    }
-
-    // MARK: Hearing meter
-
-    /// Every process the app taps already measure, plus Tone itself, which plays their processed copies.
-    private var meterExclusions: [AudioObjectID] {
-        var excluded = taps.values.flatMap(\.processes)
-        if let own = CA.processObject(pid: getpid()) { excluded.append(own) }
-        return excluded.sorted()
-    }
-
-    private func syncMeter() {
-        guard metering, let outputUID else {
-            meter?.invalidate()
-            meter = nil
-            return
-        }
-        let excluded = meterExclusions
-        if let meter, (try? meter.updateProcesses(excluded)) != nil { return }
-        meter?.invalidate()
-        do {
-            meter = try AppTap(key: "meter", processes: excluded, outputUID: outputUID,
-                               gain: 1, eq: nil, mix: StereoMix(), meter: true)
-        } catch {
-            meter = nil
-            record(error, "meter")
-        }
-    }
-
-    /// Mean-square level of everything playing since the last call, after Tone's
-    /// gain and before the device volume. Nil while the meter isn't running.
-    func takeMeanSquare() -> Double? {
-        guard let meter else { return nil }
-        // Separate sources add up in power.
-        return ([meter.kernel] + taps.values.map(\.kernel)).compactMap { $0.takeMeanSquare() }.reduce(0, +)
     }
 
     func stopAll() {

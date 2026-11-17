@@ -5,7 +5,8 @@ import Foundation
 @main
 struct CheckDSP {
     /// Feeds a constant 0.5 into the left channel only and returns the settled output levels.
-    static func render(_ mix: StereoMix, kernel: DSPKernel = DSPKernel(sampleRate: 48_000)) -> (l: Float, r: Float) {
+    static func render(_ mix: StereoMix) -> (l: Float, r: Float) {
+        let kernel = DSPKernel(sampleRate: 48_000)
         kernel.update(gain: 1, eq: nil, mix: mix)
         let frames = 512
         var input = [Float](repeating: 0, count: frames * 2)
@@ -44,16 +45,5 @@ struct CheckDSP {
         expect("crossfeed left", crossed.l, 0.5 / (1 + feed))
         expect("crossfeed leaks into right", crossed.r, 0.5 * feed / (1 + feed))
         print("PASS: balance and crossfeed levels")
-
-        // 0.5 on one channel of two is a mean square of 0.125.
-        let player = DSPKernel(sampleRate: 48_000)
-        _ = render(StereoMix(), kernel: player)
-        expect("played level", Float(player.takeMeanSquare() ?? 0), 0.125)
-        if player.takeMeanSquare() != nil { fatalError("level should reset after it is taken") }
-        let meter = DSPKernel(sampleRate: 48_000, writesOutput: false)
-        let silent = render(StereoMix(), kernel: meter)
-        expect("meter leaves output silent", silent.l, 0)
-        expect("meter level", Float(meter.takeMeanSquare() ?? 0), 0.125)
-        print("PASS: level metering")
     }
 }

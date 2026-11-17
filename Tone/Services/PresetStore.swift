@@ -85,26 +85,6 @@ struct PersistedState: Codable {
     var names: [String: String] = [:]
     var overdriveLimit: Double = 2
     var iconStyle: MenuBarIconStyle = .speaker
-    var hearingWarning = false
-    /// Estimated dB SPL that triggers the warning.
-    var hearingLimit: Double = 85
-
-    init() {}
-
-    /// Fields added after 1.0 are optional so older settings files still load.
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        let d = PersistedState()
-        apps = try c.decodeIfPresent([String: AppAudioSettings].self, forKey: .apps) ?? d.apps
-        pinned = try c.decodeIfPresent([String].self, forKey: .pinned) ?? d.pinned
-        hidden = try c.decodeIfPresent([String].self, forKey: .hidden) ?? d.hidden
-        appOrder = try c.decodeIfPresent([String].self, forKey: .appOrder) ?? d.appOrder
-        names = try c.decodeIfPresent([String: String].self, forKey: .names) ?? d.names
-        overdriveLimit = try c.decodeIfPresent(Double.self, forKey: .overdriveLimit) ?? d.overdriveLimit
-        iconStyle = try c.decodeIfPresent(MenuBarIconStyle.self, forKey: .iconStyle) ?? d.iconStyle
-        hearingWarning = try c.decodeIfPresent(Bool.self, forKey: .hearingWarning) ?? d.hearingWarning
-        hearingLimit = try c.decodeIfPresent(Double.self, forKey: .hearingLimit) ?? d.hearingLimit
-    }
 }
 
 @MainActor @Observable

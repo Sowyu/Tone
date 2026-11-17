@@ -22,8 +22,6 @@ final class DSPKernel: @unchecked Sendable {
     private static let ceiling: Float = 0.98
 
     let sampleRate: Double
-    /// False for the hearing meter: it only measures and leaves the output silent.
-    let writesOutput: Bool
 
     // Shared with the main thread (seqlock-protected).
     private let sequence = Atomic<UInt32>(0)
@@ -64,12 +62,8 @@ final class DSPKernel: @unchecked Sendable {
     let sawSignal = Atomic<Bool>(false)
     private let peakInBits = Atomic<UInt32>(0)
     private let peakOutBits = Atomic<UInt32>(0)
-    // Sum of per-frame mean squares and its frame count, for the hearing warning.
-    private let energyBits = Atomic<UInt64>(0)
-    private let energyFrames = Atomic<UInt64>(0)
 
-    init(sampleRate: Double, writesOutput: Bool = true) {
-        self.writesOutput = writesOutput
+    init(sampleRate: Double) {
         self.sampleRate = sampleRate > 0 ? sampleRate : 48_000
         release = Float(exp(-1.0 / (0.15 * self.sampleRate)))
         lowpass = Float(1 - exp(-2 * Double.pi * 700 / self.sampleRate))
@@ -122,13 +116,6 @@ final class DSPKernel: @unchecked Sendable {
     func takePeaks() -> (input: Float, output: Float) {
         (Float(bitPattern: peakInBits.exchange(0, ordering: .relaxed)),
          Float(bitPattern: peakOutBits.exchange(0, ordering: .relaxed)))
-    }
-
-    /// Mean-square level of what this kernel played since the last call, or nil if it played nothing.
-    func takeMeanSquare() -> Double? {
-        let sum = Double(bitPattern: energyBits.exchange(0, ordering: .relaxed))
-        let frames = energyFrames.exchange(0, ordering: .relaxed)
-        return frames > 0 ? sum / Double(frames) : nil
     }
 
     static func identityCoefficients() -> [Double] {
@@ -210,15 +197,6 @@ final class DSPKernel: @unchecked Sendable {
         peakIn = max(peakIn, peakInR)
         if peakIn > 0 && !sawSignal.load(ordering: .relaxed) { sawSignal.store(true, ordering: .relaxed) }
 
-        if !writesOutput {
-            var squaresL: Float = 0, squaresR: Float = 0
-            vDSP_svesq(left, 1, &squaresL, vDSP_Length(frames))
-            vDSP_svesq(right, 1, &squaresR, vDSP_Length(frames))
-            addEnergy(Double(squaresL + squaresR) / 2, frames: frames)
-            storeMax(peakInBits, peakIn)
-            return
-        }
-
         // 2. Preamp + EQ.
         if eqOn {
             if !eqWasOn {
@@ -245,7 +223,6 @@ final class DSPKernel: @unchecked Sendable {
         var feed = currentFeed
         var env = envelope
         var peakOut: Float = 0
-        var squares: Float = 0
         for i in 0..<frames {
             gain += step
             balance += balanceStep
@@ -272,7 +249,6 @@ final class DSPKernel: @unchecked Sendable {
             r *= env
             left[i] = l
             right[i] = r
-            squares += (l * l + r * r) / 2
             peakOut = max(peakOut, max(abs(l), abs(r)))
         }
         currentGain = targetGain
@@ -281,7 +257,6 @@ final class DSPKernel: @unchecked Sendable {
         envelope = env.isFinite ? env : 1
         storeMax(peakInBits, peakIn)
         storeMax(peakOutBits, peakOut)
-        addEnergy(Double(squares), frames: frames)
 
         // 4. Write to the output device's channels: L/R to the first two, silence elsewhere.
         writeOutput(outList, offset: offset, frames: frames)
@@ -342,19 +317,6 @@ final class DSPKernel: @unchecked Sendable {
                 monoIndex += 1
             }
         }
-    }
-
-    /// The IO thread is the only writer; the compare-exchange keeps a concurrent
-    /// `takeMeanSquare` from losing a buffer.
-    private func addEnergy(_ sum: Double, frames: Int) {
-        var old = energyBits.load(ordering: .relaxed)
-        while true {
-            let new = (Double(bitPattern: old) + sum).bitPattern
-            let (exchanged, original) = energyBits.compareExchange(expected: old, desired: new, ordering: .relaxed)
-            if exchanged { break }
-            old = original
-        }
-        energyFrames.add(UInt64(frames), ordering: .relaxed)
     }
 
     private func storeMax(_ atomic: borrowing Atomic<UInt32>, _ value: Float) {
