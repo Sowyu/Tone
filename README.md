@@ -106,6 +106,7 @@ Signing material (`*.p12`, `*.cer`, keys, keychains, `Signing.local.xcconfig`) i
 - Now Playing needs `media-control`. Since macOS 15.4 only Apple-entitled apps can read MediaRemote directly, and there's no public API for other apps' sessions. Without the tool the section is left out of the panel, and Settings says how to install it.
 - MediaRemote exposes one active session. Tone keeps earlier sessions listed as paused until their app quits, but only the active one accepts play/pause and next.
 - Command line tools are grouped under the app that launched them. For example, `afplay` started from Terminal shows up as Terminal.
+- AirPods that aren't connected show battery in 10% steps, read from their Bluetooth advertisement while the case is open. The system menu reads an encrypted exact value, so its number can be a few percent higher.
 - If an output device also has input channels, such as a USB headset, the aggregate lists those first. Tone reads the tap from the last input stream.
 
 ## License

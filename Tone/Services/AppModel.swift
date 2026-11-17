@@ -39,6 +39,7 @@ final class AppModel {
         Diagnostics.shared.attach(self)
         #if DEBUG
         EQResponse.selfCheck()
+        ProximityBattery.selfCheck()
         #endif
     }
 

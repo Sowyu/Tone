@@ -66,6 +66,7 @@ final class BluetoothAudio {
     private(set) var disconnected: [Paired] = []
     private(set) var connecting: Set<String> = []
     private(set) var details: [String: BluetoothDetails] = [:]
+    let proximity = ProximityBattery()
 
     /// "AA-BB-CC-DD-EE-FF:output" and "aa:bb:cc:dd:ee:ff" both become "AABBCCDDEEFF".
     nonisolated static func normalize(_ s: String) -> String {

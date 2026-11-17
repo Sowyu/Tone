@@ -159,7 +159,8 @@ struct OutputList: View {
         // Paired but not connected, as in the system Sound menu: click to connect.
         ForEach(model.bluetooth.disconnected) { paired in
             DeviceRow(id: "bt:\(paired.id)", name: paired.name, symbol: paired.symbol, selected: false,
-                      trailing: model.bluetooth.connecting.contains(paired.id) ? "Connecting…" : nil) {
+                      trailing: model.bluetooth.connecting.contains(paired.id) ? "Connecting…"
+                        : model.bluetooth.proximity.battery(forName: paired.name).flatMap { $0.buds ?? $0.main }.map { "\($0)%" }) {
                 model.bluetooth.connect(paired, devices: model.devices)
             }
         }

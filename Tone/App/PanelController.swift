@@ -89,6 +89,7 @@ final class PanelController: NSObject {
         if model.permission.status != .authorized { model.permission.refresh() }
         let bluetoothOutputs = model.devices.outputDevices.filter(\.isBluetooth).map { BluetoothAudio.normalize($0.uid) }
         model.bluetooth.refresh(coreAudioIDs: Set(bluetoothOutputs))
+        model.bluetooth.proximity.start()
 
         state.reset()
         model.isMenuOpen = true
@@ -111,6 +112,7 @@ final class PanelController: NSObject {
         monitors = []
         state.reset()
         model.isMenuOpen = false
+        model.bluetooth.proximity.stop()
         panel.orderOut(nil)
         statusItem.button?.highlight(false)
     }
