@@ -59,16 +59,18 @@ final class SettingsWindow: NSWindow {
 struct SettingsSection<Content: View>: View {
     let title: String
     let symbol: String
+    var tint: Color = .gray
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 7) {
-                // A fixed slot keeps every heading's text on the same line, whatever the symbol's width.
+            HStack(spacing: 8) {
+                // A System Settings style tile: white glyph on a colored rounded square.
                 Image(systemName: symbol)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 18)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 20, height: 20)
+                    .background(tint.gradient, in: .rect(cornerRadius: 5, style: .continuous))
                 Text(title).font(.system(size: 14, weight: .semibold))
             }
             .accessibilityElement(children: .combine)
