@@ -10,6 +10,7 @@
 		010B083BC54B257C146DF0A0 /* DSPKernel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097E3C1F38908281B4124E51 /* DSPKernel.swift */; };
 		0A0D7EFEEFDE0C67F3C84208 /* EQPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF52BB07AD075A8A76A8388 /* EQPanel.swift */; };
 		0AFDB9674476754591BCC570 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76CC33F3FE64C7242C9E6E95 /* DeviceManager.swift */; };
+		0CE719675CE7FEA4F85ED7A6 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = B816DA23EF52309ACBBB2C6C /* AppIcon.icon */; };
 		1F3CDB2614DA212DB36FF2A1 /* ProcessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD49804B183AAE4F18CD66B3 /* ProcessMonitor.swift */; };
 		2BD33A5957007A36ED4FA664 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E22F670B162357A0367306 /* Models.swift */; };
 		41B0EFF43978800F7F2F4675 /* ToneApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5930DF088187B3E202C44CA2 /* ToneApp.swift */; };
@@ -51,6 +52,7 @@
 		80903A636F9301DA72A58E72 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		8DC86D0145E94528DDEE74CC /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
 		B40C108BA922BA404F1AE608 /* PanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelView.swift; sourceTree = "<group>"; };
+		B816DA23EF52309ACBBB2C6C /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		C6008A5584013B1828B22A76 /* Tone.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Tone.xcconfig; sourceTree = "<group>"; };
 		CD49804B183AAE4F18CD66B3 /* ProcessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessMonitor.swift; sourceTree = "<group>"; };
 		D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothAudio.swift; sourceTree = "<group>"; };
@@ -64,6 +66,7 @@
 		0AAEDDF1489E22BC19D0AF0A /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				B816DA23EF52309ACBBB2C6C /* AppIcon.icon */,
 				49E9394FB7A0E634DADD0C26 /* Info.plist */,
 				6F8155135EDA8383EB3E8B06 /* Tone.entitlements */,
 			);
@@ -165,6 +168,7 @@
 			buildConfigurationList = 84B9A6050D0A07FDC2973E1E /* Build configuration list for PBXNativeTarget "Tone" */;
 			buildPhases = (
 				E23F651A2FAC92A7564F4B6A /* Sources */,
+				D37ECC761574A6D69A12F1CD /* Resources */,
 			);
 			buildRules = (
 			);
@@ -211,6 +215,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		D37ECC761574A6D69A12F1CD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0CE719675CE7FEA4F85ED7A6 /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		E23F651A2FAC92A7564F4B6A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -247,7 +262,7 @@
 		C5DF8591EB1B6238103E4D17 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tone/Resources/Tone.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
@@ -268,7 +283,7 @@
 		CF59E0CAD515579C9188852F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tone/Resources/Tone.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
