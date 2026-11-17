@@ -59,7 +59,11 @@ final class AppModel {
 
     // MARK: Engine
 
-    var canTap: Bool { permission.status != .denied }
+    /// Taps wait for the permission. Creating one while the prompt is undecided
+    /// blocks the main thread in Core Audio until the user answers.
+    var canTap: Bool {
+        permission.status == .authorized || (permission.status == .unknown && !CapturePermission.canCheck)
+    }
 
     func syncEngine() {
         let apps = processes.apps
@@ -71,6 +75,7 @@ final class AppModel {
             let s = store.settings(for: app.id)
             return TapRequest(app: app, gain: s.gain, eq: s.eqEnabled ? s.eq : nil)
         }
+        if requests.contains(where: { !$0.isNeutral }) { requestPermissionIfNeeded() }
         engine.sync(requests, allowTapping: canTap)
         for app in apps.values where engine.isTapped(app.id) { everPlayed.insert(app.id) }
     }
@@ -117,13 +122,11 @@ final class AppModel {
 
     func setVolume(_ key: String, _ volume: Double) {
         store.update(key) { $0.volume = min(max(volume, 0), overdriveLimit) }
-        requestPermissionIfNeeded()
         syncEngine()
     }
 
     func setEQEnabled(_ key: String, _ on: Bool) {
         store.update(key) { $0.eqEnabled = on }
-        requestPermissionIfNeeded()
         syncEngine()
     }
 
@@ -145,7 +148,6 @@ final class AppModel {
             $0.presetName = preset.name
             $0.eqEnabled = true
         }
-        requestPermissionIfNeeded()
         syncEngine()
     }
 
@@ -177,7 +179,7 @@ final class AppModel {
     }
 
     private func requestPermissionIfNeeded() {
-        guard permission.status == .unknown else { return }
+        guard permission.status == .unknown, CapturePermission.canCheck else { return }
         permission.request { [weak self] _ in self?.syncEngine() }
     }
 

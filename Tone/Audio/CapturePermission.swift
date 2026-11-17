@@ -11,6 +11,10 @@ final class CapturePermission {
     enum Status { case unknown, authorized, denied }
 
     private(set) var status: Status = .unknown
+    @ObservationIgnored private var requesting = false
+
+    /// False when the TCC SPI is missing. Then the first tap shows the prompt.
+    static var canCheck: Bool { preflight != nil && requestFn != nil }
 
     private typealias PreflightFn = @convention(c) (CFString, CFDictionary?) -> Int
     private typealias RequestFn = @convention(c) (CFString, CFDictionary?, @escaping @convention(block) (Bool) -> Void) -> Void
@@ -36,7 +40,10 @@ final class CapturePermission {
             completion(true) // Let the first tap prompt instead.
             return
         }
+        guard !requesting else { return }
+        requesting = true
         requestFn(Self.service, nil, Self.callback { [weak self] granted in
+            self?.requesting = false
             self?.status = granted ? .authorized : .denied
             completion(granted)
         })
