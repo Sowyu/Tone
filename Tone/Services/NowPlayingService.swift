@@ -40,6 +40,8 @@ final class NowPlayingService {
     /// After play/pause, the state Tone already shows. the adapter can report the
     /// old state once more before the new one, which made the button flicker.
     @ObservationIgnored private var expected: (id: String, playing: Bool, until: Date)?
+    /// What the stream last said each session was doing, to fall back to if `expected` never arrives.
+    @ObservationIgnored private var reported: [String: Bool] = [:]
 
     /// The bundled script and framework, run as `perl script framework function args…`.
     private static let adapter: [String]? = {
@@ -70,7 +72,13 @@ final class NowPlayingService {
         // the main thread only receives small parsed updates.
         let decoder = NowPlayingDecoder()
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            let updates = decoder.feed(handle.availableData)
+            let data = handle.availableData
+            // End of file: the reader exited. Without this the handler fires nonstop.
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+                return
+            }
+            let updates = decoder.feed(data)
             guard !updates.isEmpty else { return }
             MainLoop.perform { updates.forEach { self?.apply($0) } }
         }
@@ -108,11 +116,20 @@ final class NowPlayingService {
         restarts = 0
         guard let bundle = update.bundle else {
             // Empty payload: nothing is playing. The last player still takes play
-            // commands, so it stays current and its buttons stay enabled.
-            sessions = sessions.map { var s = $0; s.isPlaying = held(s.id, false); return s }
+            // commands, so it stays current and its buttons stay enabled, unless it quit.
+            let running = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
+            sessions = sessions.map {
+                var s = $0
+                reported[s.id] = false
+                s.isPlaying = held(s.id, false)
+                s.isCurrent = s.isCurrent && running.contains(s.id)
+                return s
+            }
             pruneQuitApps()
             return
         }
+        for s in sessions where s.id != bundle { reported[s.id] = false }
+        reported[bundle] = update.playing
         let session = NowPlayingSession(id: bundle, title: update.title, artist: update.artist, album: update.album,
                                         artwork: update.artwork, isPlaying: held(bundle, update.playing), isCurrent: true)
 
@@ -156,7 +173,18 @@ final class NowPlayingService {
         guard let process = Self.adapterProcess(["send", String(command.rawValue)]) else { return }
         if let id, let i = sessions.firstIndex(where: { $0.id == id }) {
             sessions[i].isPlaying.toggle()
-            expected = (id, sessions[i].isPlaying, Date().addingTimeInterval(1.5))
+            let until = Date().addingTimeInterval(1.5)
+            expected = (id, sessions[i].isPlaying, until)
+            // If the stream never confirms, go back to what it last reported.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in
+                MainActor.assumeIsolated {
+                    guard let self, let expected = self.expected, expected.id == id, expected.until == until else { return }
+                    self.expected = nil
+                    if let i = self.sessions.firstIndex(where: { $0.id == id }), let last = self.reported[id] {
+                        self.sessions[i].isPlaying = last
+                    }
+                }
+            }
         }
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice

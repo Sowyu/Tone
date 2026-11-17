@@ -21,7 +21,7 @@ targets:
       - path: Vendor/mediaremote-adapter/bin/mediaremote-adapter.pl
         buildPhase: resources
       # BSD-3-Clause asks for the license to ship with the binary.
-      - path: Vendor/mediaremote-adapter/LICENSE
+      - path: Vendor/mediaremote-adapter/mediaremote-adapter-LICENSE.txt
         buildPhase: resources
     dependencies:
       - target: MediaRemoteAdapter
@@ -39,7 +39,7 @@ targets:
         SWIFT_STRICT_CONCURRENCY: complete
         DEAD_CODE_STRIPPING: YES
 
-  # Now Playing reader, built from vendored source (BSD-3-Clause, see Vendor/mediaremote-adapter/LICENSE).
+  # Now Playing reader, built from vendored source (BSD-3-Clause, see Vendor/mediaremote-adapter/mediaremote-adapter-LICENSE.txt).
   # Apple-signed /usr/bin/perl may read MediaRemote, so Tone runs the bundled script
   # with perl and the script loads this framework into it.
   MediaRemoteAdapter:

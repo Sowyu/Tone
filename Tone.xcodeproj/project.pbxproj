@@ -36,6 +36,7 @@
 		6F33CD4659A30612D91F3F9A /* AirPodsLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C271979BF18BFE27B13D96A /* AirPodsLink.swift */; };
 		719BE24D6CD76C847E19954F /* send.m in Sources */ = {isa = PBXBuildFile; fileRef = E9696AE495F57358FC941CB0 /* send.m */; };
 		7C78A42B800B95CE728E638C /* MediaRemote.m in Sources */ = {isa = PBXBuildFile; fileRef = CBBA20D34E27A18FD605CE24 /* MediaRemote.m */; };
+		7E46232665E7D1974EC8A095 /* mediaremote-adapter-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = C40E09DAF0AE73A708FE9A85 /* mediaremote-adapter-LICENSE.txt */; };
 		849E32C87FD4293F771FD0D2 /* CoreAudioHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68C13C1451C053FF07E75DF7 /* CoreAudioHelpers.swift */; };
 		85D2BDBEED79FBE4A645ABFB /* BluetoothAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30B0C8DF6C5E0FF7E1DEEB9 /* BluetoothAudio.swift */; };
 		89198E567D1456C3C64C375D /* PresetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2CE59D657ABB101D11E2DC /* PresetStore.swift */; };
@@ -50,7 +51,6 @@
 		AF3B3F318213DC05E4DDD56D /* MenuChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 185EE181F51042E37EE4ED36 /* MenuChrome.swift */; };
 		B675AA8D50418809324A8C13 /* stream.m in Sources */ = {isa = PBXBuildFile; fileRef = B6481EE3F927238F7213D96D /* stream.m */; };
 		BB9803278E2BE04A7010A99C /* NowPlayingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF920145CE6D8865F9540019 /* NowPlayingService.swift */; };
-		C3C4DD1476A60DC8AA4504E7 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 222F40C5DCEACF9595363C67 /* LICENSE */; };
 		D233659F566D9A75F386A7CE /* keys.h in Headers */ = {isa = PBXBuildFile; fileRef = B363DB66439F32FA0848A8F5 /* keys.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D31933F8C9863EB825B06612 /* MediaRemoteAdapter.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BBFAD860C43E6DCB8C8EFBC0 /* MediaRemoteAdapter.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D36C11033448DA9CFCA17745 /* helpers.m in Sources */ = {isa = PBXBuildFile; fileRef = 27DAD5BBAB69D6613857F055 /* helpers.m */; };
@@ -96,7 +96,6 @@
 		185EE181F51042E37EE4ED36 /* MenuChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuChrome.swift; sourceTree = "<group>"; };
 		1A3A515151EF48EF8C3EAD14 /* AppRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRows.swift; sourceTree = "<group>"; };
 		1B1A2DD6269A31B9E8E65BB7 /* AudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEngine.swift; sourceTree = "<group>"; };
-		222F40C5DCEACF9595363C67 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
 		27DAD5BBAB69D6613857F055 /* helpers.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = helpers.m; sourceTree = "<group>"; };
 		2C271979BF18BFE27B13D96A /* AirPodsLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPodsLink.swift; sourceTree = "<group>"; };
 		2EE26F640FEA33656892C825 /* now_playing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = now_playing.h; sourceTree = "<group>"; };
@@ -131,6 +130,7 @@
 		B816DA23EF52309ACBBB2C6C /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		BBFAD860C43E6DCB8C8EFBC0 /* MediaRemoteAdapter.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MediaRemoteAdapter.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		C29683A35B6C20DE687BCFE8 /* mediaremote-adapter.pl */ = {isa = PBXFileReference; lastKnownFileType = text.script.perl; path = "mediaremote-adapter.pl"; sourceTree = "<group>"; };
+		C40E09DAF0AE73A708FE9A85 /* mediaremote-adapter-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "mediaremote-adapter-LICENSE.txt"; sourceTree = "<group>"; };
 		C5313A74540078F139C5A2A0 /* UpdateInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateInstaller.swift; sourceTree = "<group>"; };
 		C576999DFFC655BF0D70E991 /* get.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = get.m; sourceTree = "<group>"; };
 		C6008A5584013B1828B22A76 /* Tone.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Tone.xcconfig; sourceTree = "<group>"; };
@@ -344,7 +344,7 @@
 		F2BE7E5CA40442FBF29C27DA /* mediaremote-adapter */ = {
 			isa = PBXGroup;
 			children = (
-				222F40C5DCEACF9595363C67 /* LICENSE */,
+				C40E09DAF0AE73A708FE9A85 /* mediaremote-adapter-LICENSE.txt */,
 				7F9CBF02911934F8E31CA56A /* bin */,
 				DA9CA481CBCC9B5EE3B745EB /* include */,
 				20F5418C36494B6F1EA3C0B1 /* src */,
@@ -458,7 +458,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0CE719675CE7FEA4F85ED7A6 /* AppIcon.icon in Resources */,
-				C3C4DD1476A60DC8AA4504E7 /* LICENSE in Resources */,
+				7E46232665E7D1974EC8A095 /* mediaremote-adapter-LICENSE.txt in Resources */,
 				4E2F4B93056FAD5752EEFF20 /* mediaremote-adapter.pl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
