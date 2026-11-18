@@ -19,6 +19,9 @@ final class AudioEngine {
 
     private var taps: [String: AppTap] = [:]
     private var neutralSince: [String: Date] = [:]
+    /// Rebuilds per app after a tap's IO never started. Reset when the output changes.
+    private var stalls: [String: Int] = [:]
+    private static let maxStalls = 3
     private(set) var outputUID: String?
     private(set) var lastError: String?
 
@@ -39,12 +42,15 @@ final class AudioEngine {
     func setOutputDevice(uid: String?) {
         guard uid != outputUID else { return }
         outputUID = uid
+        stalls = [:]
         let old = taps
         taps = [:]
         guard let uid else {
             old.values.forEach { $0.invalidate() }
             return
         }
+        // A device that is still connecting (Bluetooth) can leave the new tap with no IO.
+        if !old.isEmpty { syncLater(3.5) }
         for (key, tap) in old {
             do {
                 taps[key] = try AppTap(key: key, processes: tap.processes, outputUID: uid,
@@ -73,6 +79,15 @@ final class AudioEngine {
         let now = Date()
         for request in requests {
             let key = request.app.id
+            // A tap whose IO never ran keeps the app muted with nothing playing in its place.
+            if let tap = taps[key], tap.kernel.callbackCount.load(ordering: .relaxed) == 0,
+               now.timeIntervalSince(tap.createdAt) > 2 {
+                Self.log.error("Tap for \(key, privacy: .public) never started; rebuilding")
+                tap.invalidate()
+                taps[key] = nil
+                neutralSince[key] = nil
+                stalls[key, default: 0] += 1
+            }
             if let tap = taps[key] {
                 if request.isNeutral {
                     // Keep a neutral tap for a few seconds so dragging through 100% doesn't rebuild it.
@@ -102,7 +117,7 @@ final class AudioEngine {
                     }
                     tap.invalidate()
                 }
-            } else if !request.isNeutral, allowTapping {
+            } else if !request.isNeutral, allowTapping, stalls[key, default: 0] < Self.maxStalls {
                 do {
                     taps[key] = try AppTap(key: key, processes: request.app.processObjects, outputUID: outputUID,
                                            gain: request.gain, eq: request.eq, mix: request.mix)
