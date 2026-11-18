@@ -88,12 +88,12 @@ final class DeviceManager {
 
     init() {
         refreshDevices()
-        refreshDefaults(notify: false)
+        refreshDefaults()
         let sys = CA.system
         systemListeners = [
             PropertyListener(sys, CA.address(kAudioHardwarePropertyDevices)) { [weak self] in self?.refreshDevices() },
-            PropertyListener(sys, CA.address(kAudioHardwarePropertyDefaultOutputDevice)) { [weak self] in self?.refreshDefaults(notify: true) },
-            PropertyListener(sys, CA.address(kAudioHardwarePropertyDefaultInputDevice)) { [weak self] in self?.refreshDefaults(notify: false) },
+            PropertyListener(sys, CA.address(kAudioHardwarePropertyDefaultOutputDevice)) { [weak self] in self?.refreshDefaults() },
+            PropertyListener(sys, CA.address(kAudioHardwarePropertyDefaultInputDevice)) { [weak self] in self?.refreshDefaults() },
         ]
     }
 
@@ -118,14 +118,15 @@ final class DeviceManager {
         inputDevices = inputs
     }
 
-    private func refreshDefaults(notify: Bool) {
+    /// Either listener can see a new output first (a headset changes both), so both notify.
+    private func refreshDefaults() {
         let out = CA.get(CA.system, CA.address(kAudioHardwarePropertyDefaultOutputDevice), as: AudioObjectID.self) ?? 0
         defaultInputID = CA.get(CA.system, CA.address(kAudioHardwarePropertyDefaultInputDevice), as: AudioObjectID.self) ?? 0
         let changed = out != defaultOutputID
         defaultOutputID = out
         if changed {
             observeVolume(of: out)
-            if notify { onDefaultOutputChanged?(out) }
+            onDefaultOutputChanged?(out)
         }
     }
 
